@@ -67,6 +67,10 @@
       "destination": "/samples/$1"
     },
     {
+      "source": "/download/(.*)",
+      "destination": "/download/$1"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

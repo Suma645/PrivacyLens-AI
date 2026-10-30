@@ -325,6 +325,7 @@ export default function App() {
         fileId={analysisResult?.file_id}
         imageInfo={analysisResult?.image_info}
         residualRisk={analysisResult?.residual_risk}
+        protectedImage={analysisResult?.protected_image}
       />
 
       {/* Security Guarantees & About Modal */}

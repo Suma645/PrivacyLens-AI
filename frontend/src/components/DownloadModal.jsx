@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { getDownloadUrl } from '../services/api';
 
-export default function DownloadModal({ isOpen, onClose, fileId, imageInfo, residualRisk }) {
+export default function DownloadModal({ isOpen, onClose, fileId, imageInfo, residualRisk, protectedImage }) {
   const [format, setFormat] = useState('png');
   const [check1, setCheck1] = useState(false);
   const [check2, setCheck2] = useState(false);
@@ -39,8 +39,8 @@ export default function DownloadModal({ isOpen, onClose, fileId, imageInfo, resi
       // non-fatal
     }
 
-    // Trigger browser file download
-    const url = getDownloadUrl(fileId, format);
+    // Trigger browser file download (supports both server endpoint and on-device data URL)
+    const url = getDownloadUrl(fileId, format, protectedImage);
     const link = document.createElement('a');
     link.href = url;
     link.download = `snapshield-protected-${Date.now()}.${format}`;

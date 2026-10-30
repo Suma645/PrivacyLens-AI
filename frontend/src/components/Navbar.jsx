@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Lock, Eye, Menu, X, CheckCircle, Info } from 'lucide-react';
+import { Shield, Lock, Eye, Menu, X, CheckCircle, Info, Smartphone } from 'lucide-react';
 
 export default function Navbar({ onNavigate, activeTab, isBackendHealthy, onOpenAbout }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -76,6 +76,15 @@ export default function Navbar({ onNavigate, activeTab, isBackendHealthy, onOpen
               </span>
             </div>
 
+            <a
+              href="/download/SnapShield-v1.0-debug.apk"
+              download="SnapShield-v1.0-debug.apk"
+              className="text-xs font-semibold text-cyan-300 hover:text-white px-3 py-1.5 rounded-lg border border-cyan-500/30 hover:border-cyan-400 bg-cyan-950/40 transition-colors flex items-center gap-1.5"
+            >
+              <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
+              Download APK
+            </a>
+
             <button
               onClick={() => onNavigate('upload')}
               className="relative inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white transition-all duration-200 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 rounded-lg shadow-md shadow-blue-500/20 hover:shadow-cyan-500/30 hover:scale-102 focus:outline-none focus:ring-2 focus:ring-cyan-400 active:scale-98"
@@ -127,6 +136,15 @@ export default function Navbar({ onNavigate, activeTab, isBackendHealthy, onOpen
           >
             Protect Screenshot
           </button>
+          <a
+            href="/download/SnapShield-v1.0-debug.apk"
+            download="SnapShield-v1.0-debug.apk"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center gap-2 w-full text-left px-3 py-2 text-base font-medium text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 rounded-lg"
+          >
+            <Smartphone className="w-4 h-4" />
+            Download Android App (.APK)
+          </a>
           <button
             onClick={() => { onOpenAbout(); setMobileMenuOpen(false); }}
             className="block w-full text-left px-3 py-2 text-base font-medium text-slate-300 hover:bg-slate-900 rounded-lg"
