@@ -5,7 +5,6 @@ import HowItWorks from './components/HowItWorks';
 import UploadZone from './components/UploadZone';
 import RiskDashboard from './components/RiskDashboard';
 import PrivacyEditor from './components/PrivacyEditor';
-import StegoLab from './components/StegoLab';
 import DownloadModal from './components/DownloadModal';
 import AboutModal from './components/AboutModal';
 import InstallPwaPrompt from './components/InstallPwaPrompt';
@@ -16,7 +15,7 @@ import { runClientOcr } from './services/clientOcr';
 import { Shield, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('landing'); // 'landing', 'how-it-works', 'upload', 'editor'
+  const [activeTab, setActiveTab] = useState('landing');
   const [isBackendHealthy, setIsBackendHealthy] = useState(false);
   
   // Analysis State
@@ -33,7 +32,6 @@ export default function App() {
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [globalNotification, setGlobalNotification] = useState(null);
 
-  // Check backend health on mount
   useEffect(() => {
     async function checkHealth() {
       const data = await checkBackendHealth();
@@ -47,7 +45,7 @@ export default function App() {
     setTimeout(() => setGlobalNotification(null), 4500);
   };
 
-  // Analyze Screenshot handler
+  // Fast on-device OCR analyzer
   const handleAnalyze = async (file, preloadedTokens = null) => {
     setAnalyzing(true);
     setUploadProgress(20);
@@ -67,7 +65,6 @@ export default function App() {
 
       setUploadProgress(85);
 
-      // Call analyze API (falls back to on-device engine with clientTokens if backend unreachable)
       const result = await analyzeScreenshot(file, clientTokens);
       setUploadProgress(100);
 
@@ -85,7 +82,7 @@ export default function App() {
     }
   };
 
-  // Load Preset Sample Screenshot for 1-click test
+  // Load Preset Sample Screenshot for 1-click demo
   const handleLoadSample = async (sampleFilename, title) => {
     setAnalyzing(true);
     setUploadProgress(15);
@@ -95,7 +92,6 @@ export default function App() {
       const blob = await res.blob();
       const file = new File([blob], sampleFilename, { type: 'image/png' });
 
-      // Load companion ocr tokens if available
       let companionTokens = [];
       try {
         const jsonFilename = sampleFilename.replace(/\.png$/i, '.ocr.json');
@@ -103,9 +99,7 @@ export default function App() {
         if (jsonRes.ok) {
           companionTokens = await jsonRes.json();
         }
-      } catch (e) {
-        // non-fatal
-      }
+      } catch (e) {}
 
       await handleAnalyze(file, companionTokens);
       showNotification(`Loaded demo screenshot: ${title}`, 'info');
@@ -116,7 +110,7 @@ export default function App() {
     }
   };
 
-  // Toggle Item Visibility (Keep Visible vs Redact)
+  // Toggle Item Visibility
   const handleToggleItemVisible = async (itemId) => {
     if (!analysisResult) return;
 
@@ -127,17 +121,15 @@ export default function App() {
       return d;
     });
 
-    // Optimistic UI update
     setAnalysisResult(prev => ({
       ...prev,
       detections: updatedDetections
     }));
 
-    // Sync with backend
     await syncProtectionUpdate(updatedDetections, manualBoxes);
   };
 
-  // Change Redaction Style (blur, pixelate, blackout)
+  // Change Redaction Style
   const handleChangeItemStyle = async (itemId, style) => {
     if (!analysisResult) return;
 
@@ -156,7 +148,7 @@ export default function App() {
     await syncProtectionUpdate(updatedDetections, manualBoxes);
   };
 
-  // Spotlight Visible Box Operations (Inverted Selection: Only selected areas are clear, rest blurred)
+  // Spotlight Box Handlers
   const handleAddVisibleBox = async (newBox) => {
     const boxWithId = { id: 'vis_' + Date.now(), ...newBox };
     const updated = [...visibleBoxes, boxWithId];
@@ -177,7 +169,7 @@ export default function App() {
     showNotification("Cleared all visible selections.", "info");
   };
 
-  // Manual Box Operations
+  // Manual Box Handlers
   const handleAddManualBox = async (newBox) => {
     const updatedBoxes = [...manualBoxes, newBox];
     setManualBoxes(updatedBoxes);
@@ -191,7 +183,6 @@ export default function App() {
     showNotification("Cleared all manual blur boxes.", "info");
   };
 
-  // Bulk Actions
   const handleProtectAll = async () => {
     if (!analysisResult) return;
     const updatedDetections = analysisResult.detections.map(d => ({
@@ -214,7 +205,6 @@ export default function App() {
     await syncProtectionUpdate(updatedDetections, manualBoxes, visibleBoxes);
   };
 
-  // Sync with backend /api/protect
   const syncProtectionUpdate = async (detections, boxes = manualBoxes, visBoxes = visibleBoxes, mode = protectionMode) => {
     if (!analysisResult?.file_id) return;
     setUpdatingProtection(true);
@@ -239,7 +229,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-slate-950">
       
-      {/* Global Notification Toast */}
       {globalNotification && (
         <div className="fixed top-20 right-6 z-50 animate-bounce">
           <div className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl border text-xs font-semibold backdrop-blur-md ${
@@ -259,10 +248,8 @@ export default function App() {
         </div>
       )}
 
-      {/* In-App Mobile PWA Installation Banner */}
       <InstallPwaPrompt />
 
-      {/* Navigation Bar */}
       <Navbar
         activeTab={activeTab}
         onNavigate={(tab) => setActiveTab(tab)}
@@ -270,10 +257,8 @@ export default function App() {
         onOpenAbout={() => setIsAboutOpen(true)}
       />
 
-      {/* Main View Router */}
       <main className="flex-grow">
         
-        {/* Landing Page */}
         {activeTab === 'landing' && (
           <LandingHero
             onStartUpload={() => setActiveTab('upload')}
@@ -282,12 +267,10 @@ export default function App() {
           />
         )}
 
-        {/* How It Works */}
         {activeTab === 'how-it-works' && (
           <HowItWorks onStart={() => setActiveTab('upload')} />
         )}
 
-        {/* Upload Zone */}
         {activeTab === 'upload' && (
           <UploadZone
             onAnalyze={handleAnalyze}
@@ -297,16 +280,9 @@ export default function App() {
           />
         )}
 
-        {/* Steganography Lab */}
-        {activeTab === 'stego' && (
-          <StegoLab />
-        )}
-
-        {/* Editor & Risk Dashboard */}
         {activeTab === 'editor' && (
           <div>
             {!analysisResult ? (
-              /* Empty state if user navigates to editor before uploading */
               <div className="max-w-md mx-auto my-20 p-8 text-center rounded-3xl bg-slate-900/60 border border-slate-800 space-y-4">
                 <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-600/10 border border-blue-500/30 flex items-center justify-center text-cyan-400">
                   <Shield className="w-8 h-8" />
@@ -325,7 +301,6 @@ export default function App() {
             ) : (
               <div className="space-y-6">
                 
-                {/* Risk Analysis Dashboard */}
                 <RiskDashboard
                   analysisResult={analysisResult}
                   onToggleItemVisible={handleToggleItemVisible}
@@ -338,7 +313,6 @@ export default function App() {
                   }}
                 />
 
-                {/* Interactive Privacy Split-Screen Editor */}
                 <div id="privacy-editor-container">
                   <PrivacyEditor
                     originalImage={analysisResult.original_image}
@@ -369,7 +343,6 @@ export default function App() {
 
       </main>
 
-      {/* Pre-Flight Checklist & Download Modal */}
       <DownloadModal
         isOpen={isDownloadOpen}
         onClose={() => setIsDownloadOpen(false)}
@@ -379,13 +352,11 @@ export default function App() {
         protectedImage={analysisResult?.protected_image}
       />
 
-      {/* Security Guarantees & About Modal */}
       <AboutModal
         isOpen={isAboutOpen}
         onClose={() => setIsAboutOpen(false)}
       />
 
-      {/* Footer */}
       <Footer
         onNavigate={(tab) => setActiveTab(tab)}
         onOpenAbout={() => setIsAboutOpen(true)}
