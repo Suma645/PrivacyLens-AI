@@ -25,7 +25,7 @@ const PATTERNS = [
     regex: /-----BEGIN (?:RSA|EC|OPENSSH|DSA|PRIVATE) KEY-----/i,
     severity: "Critical",
     confidence: 0.99,
-    action: "Solid Blackout",
+    action: "Gaussian Blur",
     explanation: "Cryptographic private key detected. Exposure allows complete impersonation."
   },
   {
@@ -34,7 +34,7 @@ const PATTERNS = [
     regex: /\bAKIA[0-9A-Z]{16}\b/,
     severity: "Critical",
     confidence: 0.98,
-    action: "Solid Blackout",
+    action: "Gaussian Blur",
     explanation: "Amazon Web Services (AWS) Access Key ID detected."
   },
   {
@@ -43,7 +43,7 @@ const PATTERNS = [
     regex: /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,40}\b|\bgithub_pat_[A-Za-z0-9_]{82}\b/,
     severity: "Critical",
     confidence: 0.99,
-    action: "Solid Blackout",
+    action: "Gaussian Blur",
     explanation: "GitHub Personal Access Token detected."
   },
   {
@@ -52,7 +52,7 @@ const PATTERNS = [
     regex: /\b(?:api[_-]?key|secret[_-]?key|auth[_-]?token|bearer)[\s:=]+['"]?([A-Za-z0-9\-_]{16,64})['"]?/i,
     severity: "Critical",
     confidence: 0.95,
-    action: "Solid Blackout",
+    action: "Gaussian Blur",
     explanation: "Production API Key or Secret detected."
   },
   {
@@ -61,7 +61,7 @@ const PATTERNS = [
     regex: /\b(?:password|passwd|pwd|passcode)[\s:=]+['"]?([^\s,;'"<>()]{4,32})['"]?/i,
     severity: "Critical",
     confidence: 0.94,
-    action: "Solid Blackout",
+    action: "Gaussian Blur",
     explanation: "Plaintext password detected."
   },
   {
@@ -70,7 +70,7 @@ const PATTERNS = [
     regex: /\b(?:otp|verification code|security code|2fa)[\s:is]+(\d{4,8})\b/i,
     severity: "Critical",
     confidence: 0.95,
-    action: "Solid Blackout",
+    action: "Gaussian Blur",
     explanation: "Time-based authentication code detected."
   },
   {
@@ -79,7 +79,7 @@ const PATTERNS = [
     regex: /\b(?:api[_\s-]?tokens?|cloud\s*api\s*keys?|access[_\s-]?tokens?|secret[_\s-]?keys?|bearer\s*tokens?|auth[_\s-]?tokens?|\.env\b)/i,
     severity: "Critical",
     confidence: 0.96,
-    action: "Solid Blackout",
+    action: "Gaussian Blur",
     explanation: "Reference to API tokens, cloud keys, or environment secrets detected."
   },
   {
@@ -88,7 +88,7 @@ const PATTERNS = [
     regex: /\b(?:passwords?|passcodes?|pin\s*codes?|login\s*credentials?|auth\s*credentials?|secret\s*passphrase)\b/i,
     severity: "High",
     confidence: 0.94,
-    action: "Solid Blackout",
+    action: "Gaussian Blur",
     explanation: "Reference to password or login credentials detected."
   },
   {
@@ -97,7 +97,7 @@ const PATTERNS = [
     regex: /\b(?:one[- ]time\s*passwords?|phone\s*&\s*otp|chat,\s*phone\s*&\s*otp|2fa\s*codes?|mfa\s*tokens?|verification\s*codes?)\b/i,
     severity: "High",
     confidence: 0.92,
-    action: "Solid Blackout",
+    action: "Gaussian Blur",
     explanation: "Reference to OTP, multi-factor, or phone verification authentication detected."
   },
 
@@ -108,7 +108,7 @@ const PATTERNS = [
     regex: /\b(?:\d{4}[ -]?\d{4}[ -]?\d{4}[ -]?\d{1,4}|\d{4}[ -]?\d{6}[ -]?\d{5})\b/,
     severity: "Critical",
     confidence: 0.96,
-    action: "Solid Blackout",
+    action: "Gaussian Blur",
     explanation: "Payment card number detected.",
     validate: (match) => luhnCheck(match)
   },
@@ -118,7 +118,7 @@ const PATTERNS = [
     regex: /\b(?:cvv|cvc|security code)[\s:=]+(\d{3,4})\b/i,
     severity: "Critical",
     confidence: 0.97,
-    action: "Solid Blackout",
+    action: "Gaussian Blur",
     explanation: "Card security code (CVV) detected."
   },
   {
@@ -136,7 +136,7 @@ const PATTERNS = [
     regex: /\b(?:banking\s*details|bank\s*details|bank\s*&\s*credit\s*card|credit\s*cards?|debit\s*cards?|financial\s*records?|bank\s*statements?|account\s*details?|wire\s*transfers?|account\s*balance)\b/i,
     severity: "High",
     confidence: 0.95,
-    action: "Solid Blackout",
+    action: "Gaussian Blur",
     explanation: "Reference to banking details, credit cards, or financial accounts detected."
   },
 
@@ -176,7 +176,7 @@ const PATTERNS = [
     regex: /\b\d{4}\s\d{4}\s\d{4}\b|\b\d{3}-\d{2}-\d{4}\b|\b[A-Z]{5}\d{4}[A-Z]\b/,
     severity: "Critical",
     confidence: 0.96,
-    action: "Solid Blackout",
+    action: "Gaussian Blur",
     explanation: "Government-issued identity number detected."
   },
   {
@@ -354,64 +354,80 @@ export function calculateRiskScore(detections) {
   };
 }
 
-// Render client-side protected image using HTML5 Canvas
-export async function renderProtectedImage(imageSource, detections, manualBoxes = []) {
+// Render client-side protected image using HTML5 Canvas (Selective Spotlight Sharing)
+export async function renderProtectedImage(imageSource, detections = [], manualBoxes = [], visibleBoxes = [], mode = 'spotlight') {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth || img.width;
-      canvas.height = img.naturalHeight || img.height;
+      const w = img.naturalWidth || img.width;
+      const h = img.naturalHeight || img.height;
+      canvas.width = w;
+      canvas.height = h;
       const ctx = canvas.getContext('2d');
 
-      // Draw original image
-      ctx.drawImage(img, 0, 0);
+      // Collect user-selected visible areas
+      const allVisible = [
+        ...visibleBoxes,
+        ...detections.filter(d => d.keep_visible).map(d => d.bounding_box)
+      ].filter(b => b && b.width > 0 && b.height > 0);
 
-      // Redact detections (only those where keep_visible is false)
-      const toRedact = [
-        ...detections.filter(d => !d.keep_visible).map(d => ({ box: d.bounding_box, style: d.protection_style || 'blackout' })),
-        ...manualBoxes.map(b => ({ box: b, style: b.style || 'blackout' }))
-      ];
+      const isSpotlight = mode === 'spotlight' && allVisible.length > 0;
 
-      for (const item of toRedact) {
-        const { box, style } = item;
-        if (!box) continue;
+      if (isSpotlight) {
+        // 1. Draw entire image with high-security Gaussian blur
+        ctx.save();
+        ctx.filter = 'blur(20px)';
+        ctx.drawImage(img, -20, -20, w + 40, h + 40);
+        ctx.restore();
 
-        const pad = 4;
-        const x = Math.max(0, box.x - pad);
-        const y = Math.max(0, box.y - pad);
-        const w = Math.min(canvas.width - x, box.width + pad * 2);
-        const h = Math.min(canvas.height - y, box.height + pad * 2);
+        // 2. Restore 100% crystal-clear sharp original content for selected visible sections
+        for (const box of allVisible) {
+          const bx = Math.max(0, Math.round(box.x));
+          const by = Math.max(0, Math.round(box.y));
+          const bw = Math.min(w - bx, Math.round(box.width));
+          const bh = Math.min(h - by, Math.round(box.height));
+          if (bw <= 0 || bh <= 0) continue;
 
-        if (w <= 0 || h <= 0) continue;
+          // Draw sharp unblurred original pixels
+          ctx.drawImage(img, bx, by, bw, bh, bx, by, bw, bh);
 
-        if (style === 'blackout') {
-          ctx.fillStyle = '#070b14';
-          ctx.fillRect(x, y, w, h);
-        } else if (style === 'pixelate') {
-          // Pixelate effect
-          const pixelSize = Math.max(8, Math.floor(Math.min(w, h) / 6));
-          ctx.imageSmoothingEnabled = false;
-          const tempCanvas = document.createElement('canvas');
-          tempCanvas.width = Math.max(1, Math.floor(w / pixelSize));
-          tempCanvas.height = Math.max(1, Math.floor(h / pixelSize));
-          const tCtx = tempCanvas.getContext('2d');
-          tCtx.drawImage(canvas, x, y, w, h, 0, 0, tempCanvas.width, tempCanvas.height);
-          ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, x, y, w, h);
-          ctx.imageSmoothingEnabled = true;
-        } else {
-          // Blur effect
+          // Subtle elegant highlight border around the shared section
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(bx, by, bw, bh);
+        }
+      } else {
+        // Redaction fallback: smooth blur for any unselected sensitive items
+        ctx.drawImage(img, 0, 0);
+
+        const toRedact = [
+          ...detections.filter(d => !d.keep_visible).map(d => ({ box: d.bounding_box })),
+          ...manualBoxes.map(b => ({ box: b }))
+        ];
+
+        for (const item of toRedact) {
+          const { box } = item;
+          if (!box) continue;
+
+          const pad = 4;
+          const x = Math.max(0, box.x - pad);
+          const y = Math.max(0, box.y - pad);
+          const rw = Math.min(canvas.width - x, box.width + pad * 2);
+          const rh = Math.min(canvas.height - y, box.height + pad * 2);
+          if (rw <= 0 || rh <= 0) continue;
+
           ctx.save();
-          ctx.filter = 'blur(12px)';
-          ctx.drawImage(canvas, x, y, w, h, x, y, w, h);
+          ctx.filter = 'blur(16px)';
+          ctx.drawImage(canvas, x, y, rw, rh, x, y, rw, rh);
           ctx.restore();
         }
       }
 
       resolve(canvas.toDataURL('image/png'));
     };
-    img.onerror = (e) => reject(new Error("Failed to load image for canvas redaction"));
+    img.onerror = () => reject(new Error("Failed to load image for canvas protection"));
 
     if (typeof imageSource === 'string') {
       img.src = imageSource;

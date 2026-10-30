@@ -27,7 +27,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"-----BEGIN (?:RSA|EC|OPENSSH|DSA|PRIVATE) KEY-----", re.IGNORECASE),
                 "severity": "Critical",
                 "confidence": 0.99,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "explanation": "Cryptographic private key detected. Exposure allows complete impersonation and decrypting of secure systems."
             },
             {
@@ -36,7 +36,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
                 "severity": "Critical",
                 "confidence": 0.98,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "explanation": "Amazon Web Services (AWS) Access Key ID detected. Hackers use these to compromise cloud infrastructure."
             },
             {
@@ -45,7 +45,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,40}\b|\bgithub_pat_[A-Za-z0-9_]{82}\b"),
                 "severity": "Critical",
                 "confidence": 0.99,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "explanation": "GitHub Personal Access Token detected. Grants direct access to code repositories and private repos."
             },
             {
@@ -54,7 +54,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"(?i)\b(?:api[_-]?key|secret[_-]?key|client[_-]?secret|auth[_-]?token)[\s:=]+['\"]?([A-Za-z0-9\-_]{16,64})['\"]?"),
                 "severity": "Critical",
                 "confidence": 0.95,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "explanation": "Production API Key or Secret detected. Compromised keys lead to severe account takeover and data breach."
             },
             {
@@ -63,7 +63,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"\bAIza[0-9A-Za-z\-_]{35}\b"),
                 "severity": "Critical",
                 "confidence": 0.98,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "explanation": "Google / Firebase / Gemini API Key detected. Can be abused for unauthorized API quota billing."
             },
             {
@@ -72,7 +72,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"\beyJ[a-zA-Z0-9_\-]{10,}\.eyJ[a-zA-Z0-9_\-]{10,}\.[a-zA-Z0-9_\-]{10,}\b"),
                 "severity": "Critical",
                 "confidence": 0.97,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "explanation": "JSON Web Token (JWT) session detected. Allows immediate session replay and identity spoofing."
             },
             {
@@ -81,7 +81,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"(?i)\b(?:password|passwd|pwd|passcode)[\s:=]+['\"]?([^\s,;'\"]{4,32})['\"]?"),
                 "severity": "Critical",
                 "confidence": 0.94,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "explanation": "Explicit plaintext password found. Immediate account compromise risk if shared."
             },
             {
@@ -90,7 +90,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"(?i)\b(?:otp|one[- ]time password|2fa|verification code|security code)[\s:is]+(\d{4,8})\b"),
                 "severity": "Critical",
                 "confidence": 0.95,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "explanation": "Time-based authentication code detected. Enables real-time two-factor authentication bypass."
             },
             {
@@ -99,7 +99,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"\b(?:api[_\s-]?tokens?|cloud\s*api\s*keys?|access[_\s-]?tokens?|secret[_\s-]?keys?|bearer\s*tokens?|auth[_\s-]?tokens?|\.env\b)", re.IGNORECASE),
                 "severity": "Critical",
                 "confidence": 0.96,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "explanation": "Reference to API tokens, cloud keys, or environment secrets detected."
             },
             {
@@ -108,7 +108,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"\b(?:passwords?|passcodes?|pin\s*codes?|login\s*credentials?|auth\s*credentials?|secret\s*passphrase)\b", re.IGNORECASE),
                 "severity": "High",
                 "confidence": 0.94,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "explanation": "Reference to password or login credentials detected."
             },
             {
@@ -117,7 +117,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"\b(?:one[- ]time\s*passwords?|phone\s*&\s*otp|chat,\s*phone\s*&\s*otp|2fa\s*codes?|mfa\s*tokens?|verification\s*codes?)\b", re.IGNORECASE),
                 "severity": "High",
                 "confidence": 0.92,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "explanation": "Reference to OTP, multi-factor, or phone verification authentication detected."
             },
 
@@ -128,7 +128,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"\b(?:\d{4}[ -]?){3}\d{4}\b|\b\d{15,16}\b"),
                 "severity": "Critical",
                 "confidence": 0.95,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "validator": luhn_checksum_valid,
                 "explanation": "Credit or debit card number detected with valid checksum. Unauthorized disclosure can cause fraudulent card charges."
             },
@@ -138,7 +138,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"(?i)\b(?:cvv|cvc|security code)[\s:=]+(\d{3,4})\b|\b(?:exp|expires|expiry)[\s:=]+((?:0[1-9]|1[0-2])[\/\-]\d{2,4})\b"),
                 "severity": "Critical",
                 "confidence": 0.92,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "explanation": "Card security code (CVV) or expiry date detected. Combined with card numbers, this enables instant checkout fraud."
             },
             {
@@ -174,7 +174,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"\b(?:banking\s*details|bank\s*details|bank\s*&\s*credit\s*card|credit\s*cards?|debit\s*cards?|financial\s*records?|bank\s*statements?|account\s*details?|wire\s*transfers?|account\s*balance)\b", re.IGNORECASE),
                 "severity": "High",
                 "confidence": 0.95,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "explanation": "Reference to banking details, credit cards, or financial accounts detected."
             },
 
@@ -185,7 +185,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"\b(?!000|666|9\d{2})\d{3}-(?!00)\d{2}-(?!0000)\d{4}\b"),
                 "severity": "Critical",
                 "confidence": 0.96,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "explanation": "US Social Security Number (SSN) detected. High risk of identity theft, synthetic identity fraud, and credit damage."
             },
             {
@@ -194,7 +194,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"\b[2-9]\d{3}\s\d{4}\s\d{4}\b"),
                 "severity": "Critical",
                 "confidence": 0.93,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "explanation": "12-digit National Identity (Aadhaar) number detected. Exposure facilitates impersonation and unauthorized KYC queries."
             },
             {
@@ -203,7 +203,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b"),
                 "severity": "High",
                 "confidence": 0.94,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "explanation": "National tax identification (PAN) card number detected. Exposes fiscal identity and tax records."
             },
             {
@@ -212,7 +212,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"(?i)\b(?:passport\s*(?:no|num|#)?[\s:]+)([A-Z0-9]{7,10})\b|\b[A-PR-WYa-pr-wy][1-9]\d\s?\d{4}[1-9]\b"),
                 "severity": "High",
                 "confidence": 0.90,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "explanation": "Passport or government travel identification number detected. High identity duplication risk."
             },
             {
@@ -288,7 +288,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"\b(?:CONFIDENTIAL|STRICTLY CONFIDENTIAL|INTERNAL ONLY|PROPRIETARY|RESTRICTED|DO NOT DISTRIBUTE|TOP SECRET|NDA PROTECTED)\b", re.IGNORECASE),
                 "severity": "High",
                 "confidence": 0.98,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "explanation": "Enterprise confidentiality or trade secret marking detected. Unauthorized dissemination violates non-disclosure agreements."
             },
             {
@@ -315,7 +315,7 @@ class SensitiveDetector:
                 "regex": re.compile(r"(?i)\b(?:mongodb|postgres|mysql|redis):\/\/[^\s]+"),
                 "severity": "Critical",
                 "confidence": 0.97,
-                "action": "Solid Blackout",
+                "action": "Gaussian Blur",
                 "explanation": "Database URI with potential embedded authentication credentials detected. Extreme risk of database dump."
             }
         ]
@@ -357,7 +357,7 @@ class SensitiveDetector:
                     "recommended_action": rule["action"],
                     "explanation": rule["explanation"],
                     "keep_visible": False, # Core principle: user chooses what to share, protected by default!
-                    "protection_style": "blackout" if rule["action"] == "Solid Blackout" else ("pixelate" if rule["action"] == "Pixelate" else "blur")
+                    "protection_style": "blur"
                 })
 
         return findings
@@ -409,7 +409,7 @@ class SensitiveDetector:
                         "recommended_action": rule["action"],
                         "explanation": rule["explanation"],
                         "keep_visible": False,
-                        "protection_style": "blackout" if rule["action"] == "Solid Blackout" else ("pixelate" if rule["action"] == "Pixelate" else "blur")
+                        "protection_style": "blur"
                     })
 
         return all_detections

@@ -23,6 +23,8 @@ export default function App() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [manualBoxes, setManualBoxes] = useState([]);
+  const [visibleBoxes, setVisibleBoxes] = useState([]);
+  const [protectionMode, setProtectionMode] = useState('spotlight');
   const [updatingProtection, setUpdatingProtection] = useState(false);
 
   // Modals
@@ -140,18 +142,39 @@ export default function App() {
     await syncProtectionUpdate(updatedDetections, manualBoxes);
   };
 
+  // Spotlight Visible Box Operations (Inverted Selection: Only selected areas are clear, rest blurred)
+  const handleAddVisibleBox = async (newBox) => {
+    const boxWithId = { id: 'vis_' + Date.now(), ...newBox };
+    const updated = [...visibleBoxes, boxWithId];
+    setVisibleBoxes(updated);
+    await syncProtectionUpdate(analysisResult.detections, manualBoxes, updated, 'spotlight');
+    showNotification("Selected area kept clear! Surrounding image automatically blurred.", "success");
+  };
+
+  const handleRemoveVisibleBox = async (boxId) => {
+    const updated = visibleBoxes.filter(b => b.id !== boxId);
+    setVisibleBoxes(updated);
+    await syncProtectionUpdate(analysisResult.detections, manualBoxes, updated, 'spotlight');
+  };
+
+  const handleClearVisibleBoxes = async () => {
+    setVisibleBoxes([]);
+    await syncProtectionUpdate(analysisResult.detections, manualBoxes, [], 'spotlight');
+    showNotification("Cleared all visible selections.", "info");
+  };
+
   // Manual Box Operations
   const handleAddManualBox = async (newBox) => {
     const updatedBoxes = [...manualBoxes, newBox];
     setManualBoxes(updatedBoxes);
-    await syncProtectionUpdate(analysisResult.detections, updatedBoxes);
-    showNotification("Custom manual redaction box added.", "info");
+    await syncProtectionUpdate(analysisResult.detections, updatedBoxes, visibleBoxes);
+    showNotification("Custom manual blur box added.", "info");
   };
 
   const handleClearManualBoxes = async () => {
     setManualBoxes([]);
-    await syncProtectionUpdate(analysisResult.detections, []);
-    showNotification("Cleared all manual redaction boxes.", "info");
+    await syncProtectionUpdate(analysisResult.detections, [], visibleBoxes);
+    showNotification("Cleared all manual blur boxes.", "info");
   };
 
   // Bulk Actions
@@ -161,9 +184,10 @@ export default function App() {
       ...d,
       keep_visible: false
     }));
+    setVisibleBoxes([]);
     setAnalysisResult(prev => ({ ...prev, detections: updatedDetections }));
-    await syncProtectionUpdate(updatedDetections, manualBoxes);
-    showNotification("All sensitive areas are now securely protected.", "success");
+    await syncProtectionUpdate(updatedDetections, manualBoxes, [], 'spotlight');
+    showNotification("All sensitive areas securely blurred.", "success");
   };
 
   const handleInvertAll = async () => {
@@ -173,16 +197,16 @@ export default function App() {
       keep_visible: !d.keep_visible
     }));
     setAnalysisResult(prev => ({ ...prev, detections: updatedDetections }));
-    await syncProtectionUpdate(updatedDetections, manualBoxes);
+    await syncProtectionUpdate(updatedDetections, manualBoxes, visibleBoxes);
   };
 
   // Sync with backend /api/protect
-  const syncProtectionUpdate = async (detections, boxes) => {
+  const syncProtectionUpdate = async (detections, boxes = manualBoxes, visBoxes = visibleBoxes, mode = protectionMode) => {
     if (!analysisResult?.file_id) return;
     setUpdatingProtection(true);
 
     try {
-      const res = await updateProtection(analysisResult.file_id, detections, boxes);
+      const res = await updateProtection(analysisResult.file_id, detections, boxes, visBoxes, mode);
       if (res.success) {
         setAnalysisResult(prev => ({
           ...prev,
@@ -301,10 +325,15 @@ export default function App() {
                     protectedImage={analysisResult.protected_image}
                     detections={analysisResult.detections}
                     manualBoxes={manualBoxes}
+                    visibleBoxes={visibleBoxes}
+                    protectionMode={protectionMode}
                     imageInfo={analysisResult.image_info}
                     residualRisk={analysisResult.residual_risk}
                     onToggleItemVisible={handleToggleItemVisible}
                     onChangeItemStyle={handleChangeItemStyle}
+                    onAddVisibleBox={handleAddVisibleBox}
+                    onRemoveVisibleBox={handleRemoveVisibleBox}
+                    onClearVisibleBoxes={handleClearVisibleBoxes}
                     onAddManualBox={handleAddManualBox}
                     onClearManualBoxes={handleClearManualBoxes}
                     onProtectAll={handleProtectAll}

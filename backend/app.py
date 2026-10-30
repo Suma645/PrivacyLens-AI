@@ -224,44 +224,58 @@ def update_protection():
         original_cv = session["original_cv"]
         detections = data.get("detections", session["detections"])
         manual_boxes = data.get("manual_boxes", [])
+        visible_boxes = data.get("visible_boxes", [])
+        mode = data.get("mode", "spotlight" if len(visible_boxes) > 0 else "auto")
 
-        # Build list of redaction specifications
-        # Core principle: "The user explicitly chooses what to share. Everything else is protected."
+        # Collect user-selected visible areas (Spotlight Sharing)
+        all_visible = list(visible_boxes)
         redaction_specs = []
-
         for det in detections:
-            # If user marked keep_visible == True, it is safe to show
             if det.get("keep_visible") is True:
-                continue
+                b = det.get("bounding_box", {})
+                if b and b not in all_visible:
+                    all_visible.append(b)
 
-            # Otherwise protect it!
-            box = det.get("bounding_box", {})
-            style = det.get("protection_style", "blur")
-            redaction_specs.append({
-                "x": box.get("x", 0),
-                "y": box.get("y", 0),
-                "width": box.get("width", 0),
-                "height": box.get("height", 0),
-                "style": style
-            })
+        if mode == "spotlight" and len(all_visible) > 0:
+            # Inverted Spotlight Sharing: Only selected area stays clear, everything else is automatically blurred!
+            new_protected_cv = image_processor.render_spotlight_image(original_cv, all_visible)
+            session["protected_cv"] = new_protected_cv
+            session["detections"] = detections
+            residual_risk = {
+                "residual_score": 0,
+                "residual_classification": "Low Risk (Spotlight Active)",
+                "color": "#10b981",
+                "reduction_percent": 100,
+                "message": f"Only your {len(all_visible)} selected section(s) are visible. Everything else is securely blurred."
+            }
+        else:
+            # Build list of redaction specifications (Default: clean blur, no blackouts)
+            for det in detections:
+                if det.get("keep_visible") is True:
+                    continue
 
-        # Add any manual user-drawn rectangular areas
-        for box in manual_boxes:
-            redaction_specs.append({
-                "x": box.get("x", 0),
-                "y": box.get("y", 0),
-                "width": box.get("width", 0),
-                "height": box.get("height", 0),
-                "style": box.get("style", "blackout")
-            })
+                box = det.get("bounding_box", {})
+                redaction_specs.append({
+                    "x": box.get("x", 0),
+                    "y": box.get("y", 0),
+                    "width": box.get("width", 0),
+                    "height": box.get("height", 0),
+                    "style": "blur"
+                })
 
-        # Apply redaction to fresh copy of original image
-        new_protected_cv = image_processor.redact_image(original_cv, redaction_specs)
-        session["protected_cv"] = new_protected_cv
-        session["detections"] = detections
+            for box in manual_boxes:
+                redaction_specs.append({
+                    "x": box.get("x", 0),
+                    "y": box.get("y", 0),
+                    "width": box.get("width", 0),
+                    "height": box.get("height", 0),
+                    "style": "blur"
+                })
 
-        # Calculate residual risk
-        residual_risk = risk_scorer.calculate_residual_risk(detections, manual_boxes)
+            new_protected_cv = image_processor.redact_image(original_cv, redaction_specs)
+            session["protected_cv"] = new_protected_cv
+            session["detections"] = detections
+            residual_risk = risk_scorer.calculate_residual_risk(detections, manual_boxes)
 
         # Generate updated preview
         protected_preview = image_processor.cv2_to_base64(new_protected_cv, format=session["ext"])
@@ -271,7 +285,7 @@ def update_protection():
             "file_id": file_id,
             "protected_image": protected_preview,
             "residual_risk": residual_risk,
-            "active_redactions_count": len(redaction_specs)
+            "active_redactions_count": len(all_visible) if mode == "spotlight" else len(redaction_specs)
         })
 
     except Exception as e:

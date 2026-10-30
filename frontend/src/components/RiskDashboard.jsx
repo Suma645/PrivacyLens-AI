@@ -281,15 +281,9 @@ export default function RiskDashboard({
                       <div className="inline-flex items-center gap-2">
                         {/* Redaction Style Selector if protected */}
                         {!item.keep_visible && (
-                          <select
-                            value={item.protection_style || 'blur'}
-                            onChange={(e) => onChangeItemStyle(item.id, e.target.value)}
-                            className="bg-slate-950 border border-slate-700 text-xs text-cyan-300 rounded px-2 py-1"
-                          >
-                            <option value="blur">Blur</option>
-                            <option value="pixelate">Pixelate</option>
-                            <option value="blackout">Blackout</option>
-                          </select>
+                          <span className="text-[11px] px-2 py-0.5 rounded bg-cyan-950/40 text-cyan-300 border border-cyan-800/40">
+                            Auto-Blurred
+                          </span>
                         )}
 
                         {/* Toggle Keep Visible vs Redact */}

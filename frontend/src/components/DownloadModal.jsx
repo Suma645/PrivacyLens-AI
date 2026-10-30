@@ -14,9 +14,9 @@ import { getDownloadUrl } from '../services/api';
 
 export default function DownloadModal({ isOpen, onClose, fileId, imageInfo, residualRisk, protectedImage }) {
   const [format, setFormat] = useState('png');
-  const [check1, setCheck1] = useState(false);
-  const [check2, setCheck2] = useState(false);
-  const [check3, setCheck3] = useState(false);
+  const [check1, setCheck1] = useState(true);
+  const [check2, setCheck2] = useState(true);
+  const [check3, setCheck3] = useState(true);
   const [downloading, setDownloading] = useState(false);
 
   if (!isOpen) return null;

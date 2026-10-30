@@ -103,11 +103,47 @@ class ImageProcessor:
             elif style == "pixelate":
                 protected = self.apply_pixelation(protected, x, y, w, h, block_size=16)
             elif style == "blackout":
-                protected = self.apply_solid_blackout(protected, x, y, w, h, color=(10, 15, 25))
+                # Default to secure irreversible Gaussian blur instead of harsh black boxes
+                protected = self.apply_gaussian_blur(protected, x, y, w, h, intensity=51)
             else:
                 protected = self.apply_gaussian_blur(protected, x, y, w, h)
 
         return protected
+
+    def render_spotlight_image(self, original_cv_image, visible_boxes, blur_intensity=45):
+        """
+        Inverted Selective Sharing / Spotlight Mode:
+        - The entire screenshot is blurred out automatically by default (protects everything unselected).
+        - ONLY the user-selected regions (visible_boxes) remain 100% sharp and crystal clear.
+        - Zero blackouts: clean, elegant privacy blur for everything else.
+        """
+        if original_cv_image is None:
+            return None
+
+        img_h, img_w = original_cv_image.shape[:2]
+
+        # Multi-pass full image Gaussian blur
+        ksize = blur_intensity if blur_intensity % 2 == 1 else blur_intensity + 1
+        blurred = cv2.GaussianBlur(original_cv_image, (ksize, ksize), 30)
+        blurred = cv2.GaussianBlur(blurred, (ksize, ksize), 30)
+
+        # Restore crystal clear original pixels for each user-selected visible box
+        for box in visible_boxes:
+            x = max(0, int(box.get("x", 0)))
+            y = max(0, int(box.get("y", 0)))
+            w = int(box.get("width", 0))
+            h = int(box.get("height", 0))
+            x2 = min(img_w, x + w)
+            y2 = min(img_h, y + h)
+
+            if x2 > x and y2 > y:
+                # Copy original crisp pixels back over blurred background
+                blurred[y:y2, x:x2] = original_cv_image[y:y2, x:x2]
+
+                # Draw subtle high-tech emerald boundary around the clear shared region
+                cv2.rectangle(blurred, (x, y), (x2, y2), (16, 185, 129), 2)
+
+        return blurred
 
     def cv2_to_base64(self, cv_image, format="PNG"):
         """Converts OpenCV image matrix to data URI base64 string without EXIF."""

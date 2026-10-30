@@ -100,10 +100,10 @@ export async function analyzeScreenshot(file, clientOcrTokens = []) {
   };
 }
 
-export async function updateProtection(fileId, detections, manualBoxes = []) {
+export async function updateProtection(fileId, detections, manualBoxes = [], visibleBoxes = [], mode = 'spotlight') {
   // If this was a client-side session or backend is unavailable, render with Canvas
   if (!fileId || fileId.startsWith('client_')) {
-    const protectedImage = await renderProtectedImage(currentImageDataUrl, detections, manualBoxes);
+    const protectedImage = await renderProtectedImage(currentImageDataUrl, detections, manualBoxes, visibleBoxes, mode);
     const unmasked = detections.filter(d => d.keep_visible);
     const residual = calculateRiskScore(unmasked);
 
@@ -130,6 +130,8 @@ export async function updateProtection(fileId, detections, manualBoxes = []) {
         file_id: fileId,
         detections,
         manual_boxes: manualBoxes,
+        visible_boxes: visibleBoxes,
+        mode
       }),
       signal: AbortSignal.timeout(5000)
     });
@@ -142,7 +144,7 @@ export async function updateProtection(fileId, detections, manualBoxes = []) {
   }
 
   // Fallback to canvas
-  const protectedImage = await renderProtectedImage(currentImageDataUrl, detections, manualBoxes);
+  const protectedImage = await renderProtectedImage(currentImageDataUrl, detections, manualBoxes, visibleBoxes, mode);
   const unmasked = detections.filter(d => d.keep_visible);
   const residual = calculateRiskScore(unmasked);
 
