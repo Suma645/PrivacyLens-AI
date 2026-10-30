@@ -18,7 +18,189 @@ export function luhnCheck(cardStr) {
 }
 
 const PATTERNS = [
-  // Authentication
+  // 1. UPI & Digital Payments (Google Pay, PhonePe, Paytm, BHIM, NetBanking)
+  {
+    category: "Financial Information",
+    type: "UPI ID / Virtual Payment Address",
+    regex: /\b[a-zA-Z0-9.\-_]{2,}@(okhdfcbank|oksbi|okaxis|okicici|ybl|ibl|axl|paytm|upi|apl|sbi|hdfcbank|icici|kotak|postbank|barodampay|federal|allbank|cnrb|idbi|pnb|boi|rbl|indus|citi|yesbank|aubank|fbl|jupiteraxis|pz)\b|\b(?:upi\s*id|vpa|payee\s*upi|pay\s*to)[\s:=]+([a-zA-Z0-9.\-_]{2,}@[a-zA-Z0-9.\-_]{2,})\b/i,
+    severity: "Critical",
+    confidence: 0.98,
+    priority: "highest",
+    default_keep_visible: false,
+    action: "Solid Blackout",
+    explanation: "UPI ID / Virtual Payment Address detected. Direct financial payment endpoint; automatically redacted with solid black box."
+  },
+  {
+    category: "Financial Information",
+    type: "UPI Ref No. / UTR / Transaction ID",
+    regex: /\b(?:upi\s*(?:ref|transaction|txn)(?:\s*no\.?|\s*id)?|utr(?:\s*no\.?)?|txn\s*(?:id|no\.?)?|transaction\s*(?:id|no\.?)?|reference\s*(?:no\.?)?|ref\s*id|order\s*id)[\s:=#]+([A-Za-z0-9_\-]{6,36})\b|\b(?:utr|upi\s*ref)[\s:#]+(\d{12})\b/i,
+    severity: "Critical",
+    confidence: 0.97,
+    priority: "highest",
+    default_keep_visible: false,
+    action: "Solid Blackout",
+    explanation: "Financial transaction reference (UTR / UPI Ref / Transaction ID) detected. Critical payment receipt proof."
+  },
+  {
+    category: "Financial Information",
+    type: "Bank Account / Account Number",
+    regex: /\b(?:account|acct|a\/c|acc|debited\s*from|credited\s*to)[\s\S]{0,35}?(?:x{2,}|\*{2,}|\.{2,})?([0-9]{3,24})\b|\b(?:ending\s*(?:with|in))[\s:#]+([0-9]{4})\b/i,
+    severity: "Critical",
+    confidence: 0.96,
+    priority: "highest",
+    default_keep_visible: false,
+    action: "Solid Blackout",
+    explanation: "Bank account number or linked account identifier detected. Automatically redacted with solid black box."
+  },
+  {
+    category: "Financial Information",
+    type: "Bank IFSC Code",
+    regex: /\b[A-Z]{4}0[A-Z0-9]{6}\b/,
+    severity: "High",
+    confidence: 0.95,
+    priority: "highest",
+    default_keep_visible: false,
+    action: "Solid Blackout",
+    explanation: "Indian Financial System Code (IFSC) detected. Identifies bank branch."
+  },
+  {
+    category: "Financial Information",
+    type: "Credit / Debit Card",
+    regex: /\b(?:\d{4}[ -]?\d{4}[ -]?\d{4}[ -]?\d{1,4}|\d{4}[ -]?(?:\*{4}|X{4})[ -]?(?:\*{4}|X{4})[ -]?\d{4}|(?:\*{4}|X{4})[ -]?(?:\*{4}|X{4})[ -]?(?:\*{4}|X{4})[ -]?\d{4})\b/,
+    severity: "Critical",
+    confidence: 0.96,
+    priority: "highest",
+    default_keep_visible: false,
+    action: "Solid Blackout",
+    explanation: "Payment card number detected.",
+    validate: (match) => (match.includes('*') || match.toLowerCase().includes('x')) ? true : luhnCheck(match)
+  },
+  {
+    category: "Financial Information",
+    type: "Card CVV Code",
+    regex: /\b(?:cvv|cvc|security code)[\s:=]+(\d{3,4})\b/i,
+    severity: "Critical",
+    confidence: 0.97,
+    action: "Solid Blackout",
+    explanation: "Card security code (CVV) detected."
+  },
+  {
+    category: "Financial Information",
+    type: "Payment App / Transaction Status",
+    regex: /\b(?:google\s*pay|gpay|phonepe|paytm|bhim\s*upi|payment\s*successful|paid\s*successfully|transfer\s*successful|payment\s*completed|money\s*sent|paid\s*to\b|payment\s*to\b|banking\s*name)/i,
+    severity: "High",
+    confidence: 0.94,
+    action: "Gaussian Blur",
+    explanation: "Payment application header or transaction confirmation receipt detected."
+  },
+  {
+    category: "Financial Information",
+    type: "Payment Amount",
+    regex: /(?:₹|rs\.?|inr|usd|\$)\s*[0-9]+(?:,[0-9]{2,3})*(?:\.[0-9]{2})?|\b(?:amount|paid|total|sent|debited)[\s:=]+(?:₹|rs\.?|inr|usd|\$)?\s*[0-9]+(?:,[0-9]{2,3})*(?:\.[0-9]{2})?\b/i,
+    severity: "Medium",
+    confidence: 0.92,
+    priority: "optional",
+    default_keep_visible: true,
+    action: "Blur",
+    explanation: "Transaction amount detected. Optional redaction (kept visible by default; select checkbox to blur)."
+  },
+  {
+    category: "Financial Information",
+    type: "Banking & Payment Details Reference",
+    regex: /\b(?:banking\s*details|bank\s*details|bank\s*&\s*credit\s*card|credit\s*cards?|debit\s*cards?|financial\s*records?|bank\s*statements?|account\s*details?|wire\s*transfers?|account\s*balance)\b/i,
+    severity: "High",
+    confidence: 0.95,
+    action: "Gaussian Blur",
+    explanation: "Reference to banking details, credit cards, or financial accounts detected."
+  },
+
+  // 2. Identity Information
+  {
+    category: "Identity Information",
+    type: "Aadhaar Number",
+    regex: /\b[2-9]\d{3}[ -]?\d{4}[ -]?\d{4}\b|\b\d{4}\s\d{4}\s\d{4}\b/,
+    severity: "Critical",
+    confidence: 0.97,
+    priority: "highest",
+    default_keep_visible: false,
+    action: "Solid Blackout",
+    explanation: "12-digit National Identity (Aadhaar) number detected. Highest-priority critical PII; automatically redacted with solid black box."
+  },
+  {
+    category: "Identity Information",
+    type: "Permanent Account Number (PAN)",
+    regex: /\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b/,
+    severity: "Critical",
+    confidence: 0.98,
+    priority: "highest",
+    default_keep_visible: false,
+    action: "Solid Blackout",
+    explanation: "National tax identification (PAN) card detected. Highest-priority fiscal identifier; automatically redacted with solid black box."
+  },
+  {
+    category: "Identity Information",
+    type: "Social Security Number (SSN)",
+    regex: /\b\d{3}-\d{2}-\d{4}\b/,
+    severity: "Critical",
+    confidence: 0.96,
+    action: "Solid Blackout",
+    explanation: "Government-issued identity number detected."
+  },
+  {
+    category: "Identity Information",
+    type: "Personal Identity Reference",
+    regex: /\b(?:personal\s*identit(?:y|ies)|identifying\s*information|confidential\s*identit(?:y|ies)|national\s*id|identity\s*cards?|government\s*ids?)\b/i,
+    severity: "High",
+    confidence: 0.94,
+    action: "Gaussian Blur",
+    explanation: "Reference to personally identifiable or individual identity records detected."
+  },
+
+  // 3. Personal Information
+  {
+    category: "Personal Information",
+    type: "Email Address",
+    regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/,
+    severity: "Medium",
+    confidence: 0.98,
+    priority: "optional",
+    default_keep_visible: true,
+    action: "Blur",
+    explanation: "Personal or corporate email address detected. Optional redaction (kept visible by default; select checkbox to blur)."
+  },
+  {
+    category: "Personal Information",
+    type: "Phone Number",
+    regex: /(?<!\w)(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}(?!\w)/,
+    severity: "Medium",
+    confidence: 0.92,
+    priority: "optional",
+    default_keep_visible: true,
+    action: "Blur",
+    explanation: "Direct telephone contact number detected. Optional redaction (kept visible by default; select checkbox to blur)."
+  },
+  {
+    category: "Personal Information",
+    type: "Marks / Percentage / Score",
+    regex: /\b(?:marks?|percentage|score|grade|aggregate|cgpa|gpa|total)[\s:=]+(\d{1,3}(?:\.\d{1,2})?\s?%|\d{1,2}(?:\.\d{1,2})?\s*(?:\/\s*(?:100|10|50))?)\b|\b\d{1,3}(?:\.\d{1,2})?%\b|\b(?:[0-9]|10)\.\d{1,2}\s*(?:cgpa|gpa)\b/i,
+    severity: "Low",
+    confidence: 0.90,
+    priority: "optional",
+    default_keep_visible: true,
+    action: "Blur",
+    explanation: "Academic marks or percentage score detected. Optional redaction (kept visible by default; select checkbox to blur)."
+  },
+  {
+    category: "Personal Information",
+    type: "Personal Contacts & Communications",
+    regex: /\b(?:personal\s*contacts?|private\s*messages?|private\s*chats?|chat,\s*phone\s*&\s*otp|personal\s*emails?|private\s*photos?)\b/i,
+    severity: "Medium",
+    confidence: 0.91,
+    action: "Gaussian Blur",
+    explanation: "Reference to personal contact channels or private communications detected."
+  },
+
+  // 4. Authentication Information
   {
     category: "Authentication Information",
     type: "Private Key",
@@ -101,136 +283,7 @@ const PATTERNS = [
     explanation: "Reference to OTP, multi-factor, or phone verification authentication detected."
   },
 
-  // Financial
-  {
-    category: "Financial Information",
-    type: "Bank Account / IBAN",
-    regex: /\b(?:iban|account|acct|a\/c)[\s:#-]+([A-Z0-9]{8,34})\b/i,
-    severity: "Critical",
-    confidence: 0.95,
-    priority: "highest",
-    default_keep_visible: false,
-    action: "Solid Blackout",
-    explanation: "Bank account number detected. Highest-priority critical financial record; automatically redacted with solid black box."
-  },
-  {
-    category: "Financial Information",
-    type: "Credit / Debit Card",
-    regex: /\b(?:\d{4}[ -]?\d{4}[ -]?\d{4}[ -]?\d{1,4}|\d{4}[ -]?\d{6}[ -]?\d{5})\b/,
-    severity: "Critical",
-    confidence: 0.96,
-    priority: "highest",
-    default_keep_visible: false,
-    action: "Solid Blackout",
-    explanation: "Payment card number detected.",
-    validate: (match) => luhnCheck(match)
-  },
-  {
-    category: "Financial Information",
-    type: "Card CVV Code",
-    regex: /\b(?:cvv|cvc|security code)[\s:=]+(\d{3,4})\b/i,
-    severity: "Critical",
-    confidence: 0.97,
-    action: "Solid Blackout",
-    explanation: "Card security code (CVV) detected."
-  },
-  {
-    category: "Financial Information",
-    type: "Banking & Payment Details Reference",
-    regex: /\b(?:banking\s*details|bank\s*details|bank\s*&\s*credit\s*card|credit\s*cards?|debit\s*cards?|financial\s*records?|bank\s*statements?|account\s*details?|wire\s*transfers?|account\s*balance)\b/i,
-    severity: "High",
-    confidence: 0.95,
-    action: "Gaussian Blur",
-    explanation: "Reference to banking details, credit cards, or financial accounts detected."
-  },
-
-  // Personal Information
-  {
-    category: "Personal Information",
-    type: "Email Address",
-    regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/,
-    severity: "Medium",
-    confidence: 0.98,
-    priority: "optional",
-    default_keep_visible: true,
-    action: "Blur",
-    explanation: "Personal or corporate email address detected. Optional redaction (kept visible by default; select checkbox to blur)."
-  },
-  {
-    category: "Personal Information",
-    type: "Phone Number",
-    regex: /(?<!\w)(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}(?!\w)/,
-    severity: "Medium",
-    confidence: 0.92,
-    priority: "optional",
-    default_keep_visible: true,
-    action: "Blur",
-    explanation: "Direct telephone contact number detected. Optional redaction (kept visible by default; select checkbox to blur)."
-  },
-  {
-    category: "Personal Information",
-    type: "Marks / Percentage / Score",
-    regex: /\b(?:marks?|percentage|score|grade|aggregate|cgpa|gpa|total)[\s:=]+(\d{1,3}(?:\.\d{1,2})?\s?%|\d{1,2}(?:\.\d{1,2})?\s*(?:\/\s*(?:100|10|50))?)\b|\b\d{1,3}(?:\.\d{1,2})?%\b|\b(?:[0-9]|10)\.\d{1,2}\s*(?:cgpa|gpa)\b/i,
-    severity: "Low",
-    confidence: 0.90,
-    priority: "optional",
-    default_keep_visible: true,
-    action: "Blur",
-    explanation: "Academic marks or percentage score detected. Optional redaction (kept visible by default; select checkbox to blur)."
-  },
-  {
-    category: "Personal Information",
-    type: "Personal Contacts & Communications",
-    regex: /\b(?:personal\s*contacts?|private\s*messages?|private\s*chats?|chat,\s*phone\s*&\s*otp|personal\s*emails?|private\s*photos?)\b/i,
-    severity: "Medium",
-    confidence: 0.91,
-    action: "Gaussian Blur",
-    explanation: "Reference to personal contact channels or private communications detected."
-  },
-
-  // Identity Information
-  {
-    category: "Identity Information",
-    type: "Aadhaar Number",
-    regex: /\b[2-9]\d{3}[ -]?\d{4}[ -]?\d{4}\b/,
-    severity: "Critical",
-    confidence: 0.97,
-    priority: "highest",
-    default_keep_visible: false,
-    action: "Solid Blackout",
-    explanation: "12-digit National Identity (Aadhaar) number detected. Highest-priority critical PII; automatically redacted with solid black box."
-  },
-  {
-    category: "Identity Information",
-    type: "Permanent Account Number (PAN)",
-    regex: /\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b/,
-    severity: "Critical",
-    confidence: 0.98,
-    priority: "highest",
-    default_keep_visible: false,
-    action: "Solid Blackout",
-    explanation: "National tax identification (PAN) card detected. Highest-priority fiscal identifier; automatically redacted with solid black box."
-  },
-  {
-    category: "Identity Information",
-    type: "Social Security Number (SSN)",
-    regex: /\b\d{3}-\d{2}-\d{4}\b/,
-    severity: "Critical",
-    confidence: 0.96,
-    action: "Solid Blackout",
-    explanation: "Government-issued identity number detected."
-  },
-  {
-    category: "Identity Information",
-    type: "Personal Identity Reference",
-    regex: /\b(?:personal\s*identit(?:y|ies)|identifying\s*information|confidential\s*identit(?:y|ies)|national\s*id|identity\s*cards?|government\s*ids?)\b/i,
-    severity: "High",
-    confidence: 0.94,
-    action: "Gaussian Blur",
-    explanation: "Reference to personally identifiable or individual identity records detected."
-  },
-
-  // Confidential Information
+  // 5. Confidential Information
   {
     category: "Confidential Information",
     type: "Confidential Watermark / Label",
@@ -255,30 +308,31 @@ export function runClientDetection(tokens) {
   const detections = [];
   if (!tokens || tokens.length === 0) return detections;
 
-  // Use line tokens if available to preserve phrases, otherwise words
-  const lineTokens = tokens.filter(t => t.is_line);
-  const textTokens = lineTokens.length > 0 ? lineTokens : tokens;
-  const fullText = textTokens.map(t => t.text).join('\n');
+  const textTokens = tokens.filter(t => t.text && t.text.trim().length > 0);
+  const fullTextLines = textTokens.map(t => t.text).join('\n');
+  const fullTextSpaces = textTokens.map(t => t.text).join(' ');
+  const combinedText = `${fullTextLines}\n${fullTextSpaces}`;
 
   for (const pat of PATTERNS) {
     let match;
     const globalRegex = new RegExp(pat.regex.source, pat.regex.flags.includes('g') ? pat.regex.flags : pat.regex.flags + 'g');
 
-    // 1. Search in concatenated text
-    while ((match = globalRegex.exec(fullText)) !== null) {
+    while ((match = globalRegex.exec(combinedText)) !== null) {
       const matchedText = match[0].trim();
       if (!matchedText) continue;
       if (pat.validate && !pat.validate(matchedText)) {
         continue;
       }
 
-      // Find the most appropriate bounding box from tokens
+      const already = detections.some(d => d.type === pat.type && (d.text.includes(matchedText) || matchedText.includes(d.text)));
+      if (already) continue;
+
       let bestBox = null;
       const containerToken = tokens.find(t => t.text && (t.text.includes(matchedText) || matchedText.includes(t.text)));
       if (containerToken && containerToken.box) {
         bestBox = { ...containerToken.box };
       } else {
-        const words = matchedText.split(/\s+/).map(w => w.toLowerCase());
+        const words = matchedText.split(/\s+/).map(w => w.toLowerCase()).filter(w => w.length > 1);
         const matched = tokens.filter(t => t.text && words.some(w => t.text.toLowerCase().includes(w)));
         if (matched.length > 0) {
           const xMin = Math.min(...matched.map(t => t.box.x));
@@ -288,8 +342,8 @@ export function runClientDetection(tokens) {
           bestBox = {
             x: xMin,
             y: yMin,
-            width: Math.max(12, xMax - xMin),
-            height: Math.max(12, yMax - yMin)
+            width: Math.max(16, xMax - xMin),
+            height: Math.max(16, yMax - yMin)
           };
         }
       }
@@ -321,7 +375,6 @@ export function runClientDetection(tokens) {
       });
     }
 
-    // 2. Also search individual tokens
     for (const t of tokens) {
       if (!t.text) continue;
       const tokenMatch = pat.regex.exec(t.text);
@@ -330,7 +383,7 @@ export function runClientDetection(tokens) {
         if (!val) continue;
         if (pat.validate && !pat.validate(val)) continue;
 
-        const already = detections.some(d => d.text.includes(val) || val.includes(d.text));
+        const already = detections.some(d => d.type === pat.type && (d.text.includes(val) || val.includes(d.text)));
         if (!already) {
           const id = 'det_' + Math.random().toString(36).substring(2, 9);
           const priority = pat.priority || (pat.severity === 'Critical' ? 'highest' : 'standard');
@@ -358,11 +411,10 @@ export function runClientDetection(tokens) {
     }
   }
 
-  // Deduplicate overlapping detections of same text
   const uniqueDetections = [];
   const seen = new Set();
   for (const d of detections) {
-    const key = `${d.category}_${d.text}_${d.bounding_box.x}_${d.bounding_box.y}`;
+    const key = `${d.type}_${d.text}`;
     if (!seen.has(key)) {
       seen.add(key);
       uniqueDetections.push(d);
@@ -401,7 +453,7 @@ export function calculateRiskScore(detections) {
 
   for (const d of detections) {
     const sev = d.risk_severity || "Low";
-    const cat = d.category || "Confidential Information";
+    const cat = d.category || "Financial Information";
     breakdown[sev] = (breakdown[sev] || 0) + 1;
     category_breakdown[cat] = (category_breakdown[cat] || 0) + 1;
 
@@ -437,7 +489,6 @@ export function calculateRiskScore(detections) {
   };
 }
 
-// Render client-side protected image using HTML5 Canvas
 export async function renderProtectedImage(imageSource, detections = [], manualBoxes = [], visibleBoxes = [], mode = 'spotlight') {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -450,7 +501,6 @@ export async function renderProtectedImage(imageSource, detections = [], manualB
       canvas.height = h;
       const ctx = canvas.getContext('2d');
 
-      // Collect user-selected visible areas
       const allVisible = [
         ...visibleBoxes,
         ...detections.filter(d => d.keep_visible).map(d => d.bounding_box)
@@ -459,7 +509,6 @@ export async function renderProtectedImage(imageSource, detections = [], manualB
       const isSpotlight = mode === 'spotlight' && allVisible.length > 0;
 
       if (isSpotlight) {
-        // Spotlight mode: Dim and blur everything else, keep selected zone crisp
         ctx.save();
         ctx.filter = 'blur(20px)';
         ctx.drawImage(img, -20, -20, w + 40, h + 40);
@@ -479,10 +528,6 @@ export async function renderProtectedImage(imageSource, detections = [], manualB
           ctx.strokeRect(bx, by, bw, bh);
         }
       } else {
-        // Redaction mode:
-        // Highest-priority (Aadhaar, PAN, Bank Account) = solid black box
-        // Optional items (Email, Phone, Marks) = blur if checked
-        // Manual boxes = user-selected style (blackout, blur, pixelate)
         ctx.drawImage(img, 0, 0);
 
         const toRedact = [
@@ -500,19 +545,17 @@ export async function renderProtectedImage(imageSource, detections = [], manualB
           const { box, style } = item;
           if (!box) continue;
 
-          const pad = 3;
+          const pad = 4;
           const x = Math.max(0, box.x - pad);
           const y = Math.max(0, box.y - pad);
           const rw = Math.min(canvas.width - x, box.width + pad * 2);
           const rh = Math.min(canvas.height - y, box.height + pad * 2);
           if (rw <= 0 || rh <= 0) continue;
 
-          if (style === 'blackout') {
-            // Solid black boxes for Aadhaar, PAN, Bank A/C & blackout tool
+          if (style === 'blackout' || item.priority === 'highest') {
             ctx.fillStyle = '#000000';
             ctx.fillRect(x, y, rw, rh);
           } else if (style === 'pixelate') {
-            // Pixelation mosaic
             const pixelSize = Math.max(8, Math.min(rw, rh) / 6);
             ctx.save();
             ctx.imageSmoothingEnabled = false;
@@ -524,7 +567,6 @@ export async function renderProtectedImage(imageSource, detections = [], manualB
             ctx.drawImage(offCanvas, 0, 0, offCanvas.width, offCanvas.height, x, y, rw, rh);
             ctx.restore();
           } else {
-            // Gaussian Blur for optional items (Email, Phone, Marks)
             ctx.save();
             ctx.filter = 'blur(16px)';
             ctx.drawImage(canvas, x, y, rw, rh, x, y, rw, rh);
