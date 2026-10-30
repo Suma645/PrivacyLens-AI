@@ -1,0 +1,31 @@
+{
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/sw.js",
+      "destination": "/frontend/dist/sw.js"
+    },
+    {
+      "source": "/manifest.webmanifest",
+      "destination": "/frontend/dist/manifest.webmanifest"
+    },
+    {
+      "source": "/manifest.json",
+      "destination": "/frontend/dist/manifest.json"
+    },
+    {
+      "source": "/offline.html",
+      "destination": "/frontend/dist/offline.html"
+    },
+    {
+      "source": "/download/(.*)",
+      "destination": "/frontend/dist/download/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/frontend/dist/index.html"
+    }
+  ]
+}
