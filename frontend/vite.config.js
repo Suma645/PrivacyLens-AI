@@ -10,7 +10,7 @@ export default defineConfig({
   ],
   server: {
     port: 5173,
-    allowedHosts: true,
+    allowedHosts: ['privacylens-ai-3.onrender.com', '.onrender.com'],
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:5000',
@@ -20,7 +20,7 @@ export default defineConfig({
   },
   preview: {
     port: 5173,
-    allowedHosts: true,
+    allowedHosts: ['privacylens-ai-3.onrender.com', '.onrender.com'],
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:5000',
