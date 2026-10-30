@@ -14,13 +14,16 @@ import {
   Download, 
   Sparkles,
   SplitSquareVertical, 
-  Maximize2,
+  Maximize2, 
   Minimize2,
   RefreshCw,
   Check,
   Lock,
   ArrowRight,
-  MousePointer
+  MousePointer,
+  Grid,
+  Droplet,
+  Square
 } from 'lucide-react';
 
 export default function PrivacyEditor({
@@ -46,9 +49,9 @@ export default function PrivacyEditor({
   const [zoom, setZoom] = useState(1);
   const [viewMode, setViewMode] = useState('side-by-side'); // 'side-by-side' or 'slider'
   const [sliderPos, setSliderPos] = useState(50); // percentage for compare slider
-  const [activeBoxId, setActiveBoxId] = useState(null);
+  const [activeTool, setActiveTool] = useState('blackout'); // 'blackout', 'blur', 'pixelate', 'spotlight'
   
-  // Spotlight / Selection state (Active by default so user can immediately click & drag)
+  // Dragging state
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawStart, setDrawStart] = useState(null);
   const [currentDrawBox, setCurrentDrawBox] = useState(null);
@@ -65,7 +68,7 @@ export default function PrivacyEditor({
   const handleZoomOut = () => setZoom(prev => Math.max(0.5, prev - 0.25));
   const handleZoomReset = () => setZoom(1);
 
-  // Click & Drag on the original image to select what to KEEP VISIBLE
+  // Click & Drag on the original image
   const handleMouseDown = (e) => {
     if (!imgRef.current) return;
     const rect = imgRef.current.getBoundingClientRect();
@@ -98,62 +101,130 @@ export default function PrivacyEditor({
   };
 
   const handleMouseUp = () => {
-    if (isDrawing && currentDrawBox && currentDrawBox.width > 15 && currentDrawBox.height > 15) {
-      // Inverted Spotlight Sharing: Only this box is kept visible, rest is blurred!
-      onAddVisibleBox({
-        x: Math.round(currentDrawBox.x),
-        y: Math.round(currentDrawBox.y),
-        width: Math.round(currentDrawBox.width),
-        height: Math.round(currentDrawBox.height)
-      });
+    if (isDrawing && currentDrawBox && currentDrawBox.width > 12 && currentDrawBox.height > 12) {
+      if (activeTool === 'spotlight') {
+        // Spotlight Sharing: Only this box is kept visible, rest is blurred
+        onAddVisibleBox({
+          x: Math.round(currentDrawBox.x),
+          y: Math.round(currentDrawBox.y),
+          width: Math.round(currentDrawBox.width),
+          height: Math.round(currentDrawBox.height)
+        });
+      } else {
+        // Manual Redaction: blackout, blur, or pixelate
+        onAddManualBox({
+          id: 'man_' + Date.now(),
+          x: Math.round(currentDrawBox.x),
+          y: Math.round(currentDrawBox.y),
+          width: Math.round(currentDrawBox.width),
+          height: Math.round(currentDrawBox.height),
+          style: activeTool
+        });
+      }
     }
     setIsDrawing(false);
     setDrawStart(null);
     setCurrentDrawBox(null);
   };
 
-  const activeDetection = detections.find(d => d.id === activeBoxId);
+  // Get current tool display label
+  const getToolLabel = () => {
+    switch (activeTool) {
+      case 'blackout': return '⬛ Solid Blackout Active (Click & Drag to Blackout)';
+      case 'blur': return '💧 Gaussian Blur Active (Click & Drag to Blur)';
+      case 'pixelate': return '▦ Pixelation Active (Click & Drag to Pixelate)';
+      case 'spotlight': return '✨ Spotlight Active (Click & Drag Area to Keep Clear)';
+      default: return 'Redaction Tool';
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
       
-      {/* Top Spotlight Mode Banner */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-slate-900 border border-emerald-500/30 shadow-xl backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
-            <Sparkles className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              Selective Spotlight Sharing Active
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30">
-                Inverted Privacy Mode
-              </span>
-            </h3>
-            <p className="text-xs text-slate-300 mt-0.5">
-              <strong>Drag over the section you want to share.</strong> Only your selection stays clear — the entire rest of the screenshot is automatically blurred out with zero blackouts.
-            </p>
-          </div>
+      {/* Top Multi-Tool Selection Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl backdrop-blur-md">
+        
+        {/* Tool Mode Buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold text-slate-400 mr-1">Active Tool:</span>
+          
+          <button
+            onClick={() => setActiveTool('blackout')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTool === 'blackout'
+                ? 'bg-black text-amber-300 border border-amber-500/70 shadow-lg shadow-amber-500/10'
+                : 'bg-slate-950 text-slate-300 hover:text-white border border-slate-800'
+            }`}
+          >
+            <Square className="w-3.5 h-3.5 fill-current" />
+            Solid Blackout
+          </button>
+
+          <button
+            onClick={() => setActiveTool('blur')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTool === 'blur'
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                : 'bg-slate-950 text-slate-300 hover:text-white border border-slate-800'
+            }`}
+          >
+            <Droplet className="w-3.5 h-3.5" />
+            Gaussian Blur
+          </button>
+
+          <button
+            onClick={() => setActiveTool('pixelate')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTool === 'pixelate'
+                ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
+                : 'bg-slate-950 text-slate-300 hover:text-white border border-slate-800'
+            }`}
+          >
+            <Grid className="w-3.5 h-3.5" />
+            Pixelate
+          </button>
+
+          <button
+            onClick={() => setActiveTool('spotlight')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTool === 'spotlight'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20'
+                : 'bg-slate-950 text-slate-300 hover:text-white border border-slate-800'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Spotlight Selection
+          </button>
         </div>
 
         {/* Action Controls */}
         <div className="flex items-center gap-2">
+          {manualBoxes.length > 0 && (
+            <button
+              onClick={onClearManualBoxes}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer border border-slate-700"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-red-400" />
+              Clear Manual ({manualBoxes.length})
+            </button>
+          )}
+
           {visibleBoxes.length > 0 && (
             <button
               onClick={onClearVisibleBoxes}
-              className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer border border-slate-700"
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer border border-slate-700"
             >
               <Trash2 className="w-3.5 h-3.5 text-red-400" />
-              Clear Selections ({visibleBoxes.length})
+              Clear Spotlight ({visibleBoxes.length})
             </button>
           )}
 
           <button
             onClick={onOpenDownload}
-            className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 shadow-md shadow-emerald-500/25 transition-all flex items-center gap-2 cursor-pointer"
+            className="px-5 py-2 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 shadow-md shadow-emerald-500/25 transition-all flex items-center gap-2 cursor-pointer"
           >
             <Download className="w-4 h-4" />
-            Download Protected Screenshot
+            Download Protected
           </button>
         </div>
       </div>
@@ -166,18 +237,18 @@ export default function PrivacyEditor({
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
             <span>
-              <span className="text-slate-400">Status: </span>
-              <span className="font-bold text-emerald-400">
-                {visibleBoxes.length > 0 ? `${visibleBoxes.length} Section(s) Spotlighted` : 'Drag to Select Area'}
+              <span className="text-slate-400">Tool: </span>
+              <span className="font-bold text-cyan-400">
+                {getToolLabel()}
               </span>
             </span>
           </div>
 
           <div className="hidden sm:flex items-center gap-2 text-slate-400">
-            <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 border border-emerald-400 inline-block" />
-            <span>Selected = Clear & Sharp</span>
+            <span className="w-2.5 h-2.5 rounded-sm bg-black border border-amber-400 inline-block" />
+            <span>Aadhaar/PAN/Bank = Solid Blackout</span>
             <span className="w-2.5 h-2.5 rounded-sm bg-blue-500/40 border border-blue-500 inline-block ml-2" />
-            <span>Rest = Automatically Blurred</span>
+            <span>Email/Phone = Optional Blur</span>
           </div>
         </div>
 
@@ -207,7 +278,7 @@ export default function PrivacyEditor({
           <div className="flex items-center p-1 rounded-xl bg-slate-950 border border-slate-800">
             <button 
               onClick={handleZoomOut} 
-              className="p-1 hover:text-white hover:bg-slate-800 rounded" 
+              className="p-1 hover:text-white hover:bg-slate-800 rounded cursor-pointer" 
               title="Zoom Out"
             >
               <ZoomOut className="w-4 h-4" />
@@ -215,14 +286,14 @@ export default function PrivacyEditor({
             <span className="px-2 font-mono text-xs">{Math.round(zoom * 100)}%</span>
             <button 
               onClick={handleZoomIn} 
-              className="p-1 hover:text-white hover:bg-slate-800 rounded" 
+              className="p-1 hover:text-white hover:bg-slate-800 rounded cursor-pointer" 
               title="Zoom In"
             >
               <ZoomIn className="w-4 h-4" />
             </button>
             <button 
               onClick={handleZoomReset} 
-              className="p-1 hover:text-white hover:bg-slate-800 rounded ml-1" 
+              className="p-1 hover:text-white hover:bg-slate-800 rounded ml-1 cursor-pointer" 
               title="Reset Zoom"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -236,21 +307,21 @@ export default function PrivacyEditor({
       {viewMode === 'side-by-side' ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           
-          {/* LEFT: Interactive Original Screenshot (Drag to Select) */}
+          {/* LEFT: Interactive Original Screenshot (Drag to Redact or Spotlight) */}
           <div className="flex flex-col space-y-2">
             <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-400 px-1">
               <span className="flex items-center gap-1.5 text-cyan-400">
                 <MousePointer className="w-4 h-4" />
-                Original Screenshot (Click & Drag to Select What to Share)
+                Original File (Click & Drag to Apply {activeTool.toUpperCase()})
               </span>
-              <span className="text-[11px] text-emerald-400 font-bold bg-emerald-500/15 px-2 py-0.5 rounded border border-emerald-500/30">
-                Crosshair Active
+              <span className="text-[11px] text-cyan-400 font-bold bg-cyan-500/15 px-2 py-0.5 rounded border border-cyan-500/30">
+                Interactive Canvas Active
               </span>
             </div>
 
             <div 
               ref={leftContainerRef}
-              className="relative rounded-2xl overflow-auto border-2 border-dashed border-emerald-500/40 bg-slate-950 p-2 max-h-[650px] shadow-2xl cursor-crosshair select-none"
+              className="relative rounded-2xl overflow-auto border-2 border-dashed border-cyan-500/40 bg-slate-950 p-2 max-h-[650px] shadow-2xl cursor-crosshair select-none"
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
@@ -272,9 +343,130 @@ export default function PrivacyEditor({
                   viewBox={`0 0 ${naturalWidth} ${naturalHeight}`}
                   preserveAspectRatio="none"
                 >
+                  {/* Detected Items Overlay */}
+                  {detections.map((det) => {
+                    const b = det.bounding_box;
+                    if (!b || b.width <= 0) return null;
+                    const isHighest = det.priority === 'highest';
+                    const isProtected = !det.keep_visible;
+
+                    if (isProtected) {
+                      // Highest Priority = Solid Black Box
+                      if (isHighest || det.protection_style === 'blackout') {
+                        return (
+                          <g key={`det_${det.id}`}>
+                            <rect
+                              x={b.x}
+                              y={b.y}
+                              width={b.width}
+                              height={b.height}
+                              fill="#000000"
+                              stroke="#f59e0b"
+                              strokeWidth={1.5}
+                              rx={2}
+                            />
+                            <text
+                              x={b.x + 4}
+                              y={Math.max(12, b.y - 4)}
+                              fill="#f59e0b"
+                              fontSize="10"
+                              fontWeight="bold"
+                            >
+                              ⬛ SOLID BLACKOUT: {det.extracted_text.slice(0, 14)}
+                            </text>
+                          </g>
+                        );
+                      }
+
+                      // Blur
+                      return (
+                        <g key={`det_${det.id}`}>
+                          <rect
+                            x={b.x}
+                            y={b.y}
+                            width={b.width}
+                            height={b.height}
+                            fill="rgba(59, 130, 246, 0.45)"
+                            stroke="#3b82f6"
+                            strokeWidth={1.5}
+                            rx={2}
+                          />
+                          <text
+                            x={b.x + 4}
+                            y={Math.max(12, b.y - 4)}
+                            fill="#60a5fa"
+                            fontSize="10"
+                            fontWeight="bold"
+                          >
+                            💧 BLUR: {det.extracted_text.slice(0, 14)}
+                          </text>
+                        </g>
+                      );
+                    }
+
+                    // Kept visible
+                    return (
+                      <g key={`det_${det.id}`}>
+                        <rect
+                          x={b.x}
+                          y={b.y}
+                          width={b.width}
+                          height={b.height}
+                          fill="none"
+                          stroke="#10b981"
+                          strokeWidth={1.5}
+                          strokeDasharray="4 3"
+                          rx={2}
+                        />
+                        <text
+                          x={b.x + 4}
+                          y={Math.max(12, b.y - 4)}
+                          fill="#10b981"
+                          fontSize="9"
+                          fontWeight="bold"
+                        >
+                          ✓ VISIBLE
+                        </text>
+                      </g>
+                    );
+                  })}
+
+                  {/* User-Drawn Manual Redaction Boxes */}
+                  {manualBoxes.map((box, idx) => (
+                    <g key={`man_${box.id || idx}`} className="cursor-pointer">
+                      <rect
+                        x={box.x}
+                        y={box.y}
+                        width={box.width}
+                        height={box.height}
+                        fill={box.style === 'blackout' ? '#000000' : (box.style === 'pixelate' ? 'rgba(168, 85, 247, 0.45)' : 'rgba(59, 130, 246, 0.45)')}
+                        stroke={box.style === 'blackout' ? '#ef4444' : (box.style === 'pixelate' ? '#a855f7' : '#3b82f6')}
+                        strokeWidth={2}
+                        rx={3}
+                      />
+                      <rect
+                        x={box.x}
+                        y={Math.max(0, box.y - 18)}
+                        width={Math.min(box.width, 140)}
+                        height={16}
+                        fill={box.style === 'blackout' ? '#000000' : (box.style === 'pixelate' ? '#9333ea' : '#2563eb')}
+                        rx={2}
+                      />
+                      <text
+                        x={box.x + 4}
+                        y={Math.max(11, box.y - 6)}
+                        fill="#ffffff"
+                        fontSize="9"
+                        fontWeight="bold"
+                      >
+                        {box.style === 'blackout' ? '⬛ MANUAL BLACKOUT' : (box.style === 'pixelate' ? '▦ PIXELATE' : '💧 BLUR')}
+                      </text>
+                    </g>
+                  ))}
+
                   {/* User-Selected Visible Spotlight Boxes */}
                   {visibleBoxes.map((box, idx) => (
-                    <g key={`vis_${box.id || idx}`} className="cursor-pointer group">
+                    <g key={`vis_${box.id || idx}`} className="cursor-pointer">
                       <rect
                         x={box.x}
                         y={box.y}
@@ -287,21 +479,20 @@ export default function PrivacyEditor({
                       />
                       <rect
                         x={box.x}
-                        y={Math.max(0, box.y - 22)}
+                        y={Math.max(0, box.y - 20)}
                         width={Math.min(box.width, 160)}
-                        height={20}
+                        height={18}
                         fill="#059669"
                         rx={3}
                       />
                       <text
                         x={box.x + 6}
-                        y={Math.max(14, box.y - 8)}
+                        y={Math.max(13, box.y - 7)}
                         fill="#ffffff"
-                        fontSize="11"
+                        fontSize="10"
                         fontWeight="bold"
-                        fontFamily="sans-serif"
                       >
-                        ✓ KEEP VISIBLE #{idx + 1}
+                        ✓ SPOTLIGHT CLEAR #{idx + 1}
                       </text>
                     </g>
                   ))}
@@ -314,28 +505,40 @@ export default function PrivacyEditor({
                         y={currentDrawBox.y}
                         width={currentDrawBox.width}
                         height={currentDrawBox.height}
-                        fill="rgba(16, 185, 129, 0.25)"
-                        stroke="#10b981"
-                        strokeWidth={2.5}
+                        fill={
+                          activeTool === 'blackout' ? '#000000' : 
+                          activeTool === 'pixelate' ? 'rgba(168, 85, 247, 0.3)' :
+                          activeTool === 'spotlight' ? 'rgba(16, 185, 129, 0.25)' : 'rgba(59, 130, 246, 0.3)'
+                        }
+                        stroke={
+                          activeTool === 'blackout' ? '#ef4444' : 
+                          activeTool === 'pixelate' ? '#a855f7' :
+                          activeTool === 'spotlight' ? '#10b981' : '#3b82f6'
+                        }
+                        strokeWidth={2}
                         strokeDasharray="6 4"
-                        rx={4}
+                        rx={3}
                       />
                       <rect
                         x={currentDrawBox.x}
-                        y={Math.max(0, currentDrawBox.y - 20)}
+                        y={Math.max(0, currentDrawBox.y - 18)}
                         width={130}
-                        height={18}
-                        fill="#10b981"
-                        rx={3}
+                        height={16}
+                        fill={
+                          activeTool === 'blackout' ? '#000000' :
+                          activeTool === 'pixelate' ? '#a855f7' :
+                          activeTool === 'spotlight' ? '#10b981' : '#3b82f6'
+                        }
+                        rx={2}
                       />
                       <text
-                        x={currentDrawBox.x + 6}
-                        y={Math.max(12, currentDrawBox.y - 7)}
+                        x={currentDrawBox.x + 4}
+                        y={Math.max(11, currentDrawBox.y - 6)}
                         fill="#ffffff"
-                        fontSize="11"
+                        fontSize="9"
                         fontWeight="bold"
                       >
-                        SELECTING TO SHARE
+                        DRAWING {activeTool.toUpperCase()}
                       </text>
                     </g>
                   )}
@@ -345,26 +548,36 @@ export default function PrivacyEditor({
 
             <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300 flex items-center justify-between">
               <span className="flex items-center gap-1.5 text-slate-400">
-                <MousePointer className="w-3.5 h-3.5 text-emerald-400" />
-                Click and drag anywhere on the left screenshot to highlight what to keep visible.
+                <MousePointer className="w-3.5 h-3.5 text-cyan-400" />
+                Select any region to apply {activeTool}.
               </span>
-              {visibleBoxes.length > 0 && (
-                <button
-                  onClick={onClearVisibleBoxes}
-                  className="text-red-400 hover:text-red-300 font-semibold"
-                >
-                  Reset Selections
-                </button>
-              )}
+              <div className="flex items-center gap-3">
+                {manualBoxes.length > 0 && (
+                  <button
+                    onClick={onClearManualBoxes}
+                    className="text-red-400 hover:text-red-300 font-semibold cursor-pointer"
+                  >
+                    Reset Manual ({manualBoxes.length})
+                  </button>
+                )}
+                {visibleBoxes.length > 0 && (
+                  <button
+                    onClick={onClearVisibleBoxes}
+                    className="text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer"
+                  >
+                    Reset Spotlight ({visibleBoxes.length})
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* RIGHT: Live Protected Screenshot Result (Spotlight Blur) */}
+          {/* RIGHT: Live Protected Screenshot Result */}
           <div className="flex flex-col space-y-2">
             <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-400 px-1">
               <span className="flex items-center gap-1.5 text-emerald-400">
                 <ShieldCheck className="w-4 h-4" />
-                Privacy Protected Result (Only Selected Area Visible)
+                Protected Live Preview (Irreversible Burn-in)
               </span>
               <span className="text-[11px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                 Safe to Share
@@ -387,7 +600,7 @@ export default function PrivacyEditor({
             <div className="p-3 rounded-xl bg-slate-900/50 border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5 text-emerald-400" />
-                Rest of the screenshot is smoothly blurred out — zero blackouts!
+                Aadhaar/PAN/Bank blacked out; sensitive data securely sanitized.
               </span>
               <button
                 onClick={onOpenDownload}
@@ -401,10 +614,10 @@ export default function PrivacyEditor({
 
         </div>
       ) : (
-        /* Compare Slider Mode (Before / After wipe slider) */
+        /* Compare Slider Mode */
         <div className="relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 p-4 shadow-2xl max-w-4xl mx-auto space-y-3">
           <div className="text-center text-xs text-slate-300">
-            Drag the vertical handle left/right to compare <strong>Original Screenshot</strong> vs <strong>Spotlight-Blurred Result</strong>
+            Drag the vertical handle left/right to compare <strong>Original File</strong> vs <strong>Sanitized Result</strong>
           </div>
 
           <div 
@@ -453,8 +666,8 @@ export default function PrivacyEditor({
           </div>
 
           <div className="flex justify-between text-xs text-slate-400 px-4">
-            <span className="font-semibold text-blue-400">← Original Screenshot</span>
-            <span className="font-semibold text-emerald-400">Protected Screenshot →</span>
+            <span className="font-semibold text-blue-400">← Original</span>
+            <span className="font-semibold text-emerald-400">Protected Output →</span>
           </div>
         </div>
       )}

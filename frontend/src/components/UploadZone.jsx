@@ -20,24 +20,37 @@ export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSel
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
 
-  const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+  const allowedTypes = [
+    'image/png', 
+    'image/jpeg', 
+    'image/jpg', 
+    'image/webp',
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/msword'
+  ];
   const maxSizeBytes = 30 * 1024 * 1024; // 30 MB
 
   const handleFileProcess = (file) => {
     setError(null);
     if (!file) return;
 
-    if (!allowedTypes.includes(file.type.toLowerCase()) && !/\.(png|jpe?g|webp)$/i.test(file.name)) {
-      setError("Unsupported file format. Please upload a PNG, JPG, JPEG, or WEBP screenshot.");
+    const isSupported = allowedTypes.includes(file.type.toLowerCase()) || 
+      /\.(png|jpe?g|webp|pdf|docx?)$/i.test(file.name);
+
+    if (!isSupported) {
+      setError("Unsupported format. Please upload an image (PNG, JPG, WEBP) or document (PDF, DOCX).");
       return;
     }
 
     if (file.size > maxSizeBytes) {
-      setError("File exceeds 30MB limit. Please upload a smaller screenshot.");
+      setError("File exceeds 30MB limit. Please upload a smaller file.");
       return;
     }
 
     setSelectedFile(file);
+
+    const isDocument = /\.(pdf|docx?)$/i.test(file.name);
 
     // Read preview and dimensions
     const reader = new FileReader();
@@ -45,18 +58,29 @@ export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSel
       const url = e.target.result;
       setPreviewUrl(url);
 
-      // Extract image dimensions
-      const img = new Image();
-      img.onload = () => {
+      if (isDocument) {
         setImageMeta({
           name: file.name,
           sizeFormatted: (file.size / (1024 * 1024)).toFixed(2) + " MB",
-          width: img.width,
-          height: img.height,
-          type: file.type || 'image/png'
+          width: 800,
+          height: 1000,
+          type: file.name.endsWith('.pdf') ? 'application/pdf' : 'application/docx',
+          isDocument: true
         });
-      };
-      img.src = url;
+      } else {
+        const img = new Image();
+        img.onload = () => {
+          setImageMeta({
+            name: file.name,
+            sizeFormatted: (file.size / (1024 * 1024)).toFixed(2) + " MB",
+            width: img.width,
+            height: img.height,
+            type: file.type || 'image/png',
+            isDocument: false
+          });
+        };
+        img.src = url;
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -125,7 +149,7 @@ export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSel
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/png, image/jpeg, image/jpg, image/webp"
+          accept="image/png, image/jpeg, image/jpg, image/webp, application/pdf, .pdf, .docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           className="hidden"
           onChange={(e) => handleFileProcess(e.target.files[0])}
         />
@@ -137,10 +161,10 @@ export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSel
             </div>
 
             <h3 className="text-lg font-bold text-white mb-1">
-              Drag and drop your screenshot here
+              Drag and drop your screenshot or document here
             </h3>
             <p className="text-xs text-slate-400 mb-6">
-              Supports PNG, JPG, JPEG, and WEBP up to 30 MB
+              Supports PNG, JPG, WEBP, PDF & DOCX up to 30 MB
             </p>
 
             <button
@@ -149,7 +173,7 @@ export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSel
               className="inline-flex items-center px-6 py-3 rounded-xl font-semibold text-sm text-white bg-blue-600 hover:bg-blue-500 transition-colors shadow-md shadow-blue-500/20 cursor-pointer"
             >
               <FileImage className="w-4 h-4 mr-2" />
-              Browse Screenshot Files
+              Browse Images & Documents
             </button>
 
             {/* Privacy Notification Banner */}
@@ -163,17 +187,29 @@ export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSel
         ) : (
           <div className="space-y-6">
             
-            {/* Image Preview Card */}
+            {/* File Preview Card */}
             <div className="relative max-w-md mx-auto rounded-2xl overflow-hidden border border-slate-700/80 bg-slate-950 shadow-2xl group">
-              <img
-                src={previewUrl}
-                alt="Uploaded Screenshot"
-                className="w-full max-h-72 object-contain mx-auto"
-              />
+              {imageMeta?.isDocument ? (
+                <div className="p-8 text-center space-y-3 bg-slate-900/60">
+                  <div className="w-16 h-16 mx-auto rounded-2xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+                    <FileImage className="w-8 h-8" />
+                  </div>
+                  <h4 className="text-sm font-bold text-white">{imageMeta.name}</h4>
+                  <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-cyan-300 border border-blue-500/30">
+                    {imageMeta.name.endsWith('.pdf') ? 'PDF Document' : 'Word Document (.DOCX)'}
+                  </span>
+                </div>
+              ) : (
+                <img
+                  src={previewUrl}
+                  alt="Uploaded Screenshot"
+                  className="w-full max-h-72 object-contain mx-auto"
+                />
+              )}
               <button
                 type="button"
                 onClick={handleReset}
-                className="absolute top-2 right-2 p-1.5 rounded-full bg-slate-900/80 text-slate-300 hover:text-white hover:bg-red-600 transition-colors"
+                className="absolute top-2 right-2 p-1.5 rounded-full bg-slate-900/80 text-slate-300 hover:text-white hover:bg-red-600 transition-colors cursor-pointer"
                 title="Remove file"
               >
                 <X className="w-4 h-4" />

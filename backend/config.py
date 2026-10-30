@@ -8,7 +8,7 @@ class Config:
     
     # Upload Settings
     MAX_CONTENT_LENGTH = 30 * 1024 * 1024  # 30 MB max
-    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "bmp", "pdf", "docx"}
     TEMP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp_uploads")
     SESSION_EXPIRY_SECONDS = 3600  # 1 hour auto cleanup
     

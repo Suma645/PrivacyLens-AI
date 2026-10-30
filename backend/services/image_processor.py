@@ -103,8 +103,8 @@ class ImageProcessor:
             elif style == "pixelate":
                 protected = self.apply_pixelation(protected, x, y, w, h, block_size=16)
             elif style == "blackout":
-                # Default to secure irreversible Gaussian blur instead of harsh black boxes
-                protected = self.apply_gaussian_blur(protected, x, y, w, h, intensity=51)
+                # Solid blackout box (Highest priority for Aadhaar, PAN, Bank Accounts, or user choice)
+                protected = self.apply_solid_blackout(protected, x, y, w, h, color=(0, 0, 0))
             else:
                 protected = self.apply_gaussian_blur(protected, x, y, w, h)
 

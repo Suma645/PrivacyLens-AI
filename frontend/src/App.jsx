@@ -5,6 +5,7 @@ import HowItWorks from './components/HowItWorks';
 import UploadZone from './components/UploadZone';
 import RiskDashboard from './components/RiskDashboard';
 import PrivacyEditor from './components/PrivacyEditor';
+import StegoLab from './components/StegoLab';
 import DownloadModal from './components/DownloadModal';
 import AboutModal from './components/AboutModal';
 import InstallPwaPrompt from './components/InstallPwaPrompt';
@@ -47,27 +48,31 @@ export default function App() {
   };
 
   // Analyze Screenshot handler
-  const handleAnalyze = async (file) => {
+  const handleAnalyze = async (file, preloadedTokens = null) => {
     setAnalyzing(true);
     setUploadProgress(15);
 
     try {
-      // 1. Try fast client-side OCR (with 3.5s quick cutoff so backend is not delayed)
-      let clientTokens = [];
-      try {
-        setUploadProgress(30);
-        const ocrPromise = runClientOcr(file);
-        const timeoutPromise = new Promise(resolve => setTimeout(() => resolve([]), 3500));
-        clientTokens = await Promise.race([ocrPromise, timeoutPromise]);
-      } catch (e) {
-        console.warn("Client OCR skipped, relying on server engine:", e);
+      let clientTokens = preloadedTokens || [];
+      if (!clientTokens || clientTokens.length === 0) {
+        setUploadProgress(25);
+        try {
+          // Allow OCR up to 12s with progress
+          const ocrPromise = runClientOcr(file, (p) => {
+            setUploadProgress(25 + Math.round(p * 45));
+          });
+          const timeoutPromise = new Promise(resolve => setTimeout(() => resolve([]), 12000));
+          clientTokens = await Promise.race([ocrPromise, timeoutPromise]);
+        } catch (e) {
+          console.warn("Client OCR error:", e);
+        }
       }
 
-      setUploadProgress(60);
+      setUploadProgress(75);
 
-      // 2. Call backend analyze API
+      // Call analyze API (falls back to on-device engine with clientTokens if backend unreachable)
       const result = await analyzeScreenshot(file, clientTokens);
-      setUploadProgress(95);
+      setUploadProgress(100);
 
       setAnalysisResult(result);
       setManualBoxes([]);
@@ -86,14 +91,26 @@ export default function App() {
   // Load Preset Sample Screenshot for 1-click test
   const handleLoadSample = async (sampleFilename, title) => {
     setAnalyzing(true);
-    setUploadProgress(20);
+    setUploadProgress(15);
     try {
       const res = await fetch(`/samples/${sampleFilename}`);
       if (!res.ok) throw new Error("Sample file not found in public assets");
       const blob = await res.blob();
       const file = new File([blob], sampleFilename, { type: 'image/png' });
 
-      await handleAnalyze(file);
+      // Load companion ocr tokens if available
+      let companionTokens = [];
+      try {
+        const jsonFilename = sampleFilename.replace(/\.png$/i, '.ocr.json');
+        const jsonRes = await fetch(`/samples/${jsonFilename}`);
+        if (jsonRes.ok) {
+          companionTokens = await jsonRes.json();
+        }
+      } catch (e) {
+        // non-fatal
+      }
+
+      await handleAnalyze(file, companionTokens);
       showNotification(`Loaded demo screenshot: ${title}`, 'info');
     } catch (err) {
       console.error("Failed to load sample screenshot:", err);
@@ -283,6 +300,11 @@ export default function App() {
           />
         )}
 
+        {/* Steganography Lab */}
+        {activeTab === 'stego' && (
+          <StegoLab />
+        )}
+
         {/* Editor & Risk Dashboard */}
         {activeTab === 'editor' && (
           <div>
@@ -311,6 +333,8 @@ export default function App() {
                   analysisResult={analysisResult}
                   onToggleItemVisible={handleToggleItemVisible}
                   onChangeItemStyle={handleChangeItemStyle}
+                  onProtectAll={handleProtectAll}
+                  onInvertAll={handleInvertAll}
                   onProceedToEditor={() => {
                     // Smooth scroll to the interactive canvas
                     const elem = document.getElementById('privacy-editor-container');

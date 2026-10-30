@@ -104,11 +104,24 @@ const PATTERNS = [
   // Financial
   {
     category: "Financial Information",
+    type: "Bank Account / IBAN",
+    regex: /\b(?:iban|account|acct|a\/c)[\s:#-]+([A-Z0-9]{8,34})\b/i,
+    severity: "Critical",
+    confidence: 0.95,
+    priority: "highest",
+    default_keep_visible: false,
+    action: "Solid Blackout",
+    explanation: "Bank account number detected. Highest-priority critical financial record; automatically redacted with solid black box."
+  },
+  {
+    category: "Financial Information",
     type: "Credit / Debit Card",
     regex: /\b(?:\d{4}[ -]?\d{4}[ -]?\d{4}[ -]?\d{1,4}|\d{4}[ -]?\d{6}[ -]?\d{5})\b/,
     severity: "Critical",
     confidence: 0.96,
-    action: "Gaussian Blur",
+    priority: "highest",
+    default_keep_visible: false,
+    action: "Solid Blackout",
     explanation: "Payment card number detected.",
     validate: (match) => luhnCheck(match)
   },
@@ -118,17 +131,8 @@ const PATTERNS = [
     regex: /\b(?:cvv|cvc|security code)[\s:=]+(\d{3,4})\b/i,
     severity: "Critical",
     confidence: 0.97,
-    action: "Gaussian Blur",
+    action: "Solid Blackout",
     explanation: "Card security code (CVV) detected."
-  },
-  {
-    category: "Financial Information",
-    type: "Bank Account / IBAN",
-    regex: /\b(?:iban|account|acct)[\s:#-]+([A-Z0-9]{8,34})\b/i,
-    severity: "High",
-    confidence: 0.90,
-    action: "Pixelate",
-    explanation: "Bank account or international identifier detected."
   },
   {
     category: "Financial Information",
@@ -147,8 +151,10 @@ const PATTERNS = [
     regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/,
     severity: "Medium",
     confidence: 0.98,
-    action: "Gaussian Blur",
-    explanation: "Personal or corporate email address detected."
+    priority: "optional",
+    default_keep_visible: true,
+    action: "Blur",
+    explanation: "Personal or corporate email address detected. Optional redaction (kept visible by default; select checkbox to blur)."
   },
   {
     category: "Personal Information",
@@ -156,8 +162,21 @@ const PATTERNS = [
     regex: /(?<!\w)(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}(?!\w)/,
     severity: "Medium",
     confidence: 0.92,
-    action: "Gaussian Blur",
-    explanation: "Direct telephone contact number detected."
+    priority: "optional",
+    default_keep_visible: true,
+    action: "Blur",
+    explanation: "Direct telephone contact number detected. Optional redaction (kept visible by default; select checkbox to blur)."
+  },
+  {
+    category: "Personal Information",
+    type: "Marks / Percentage / Score",
+    regex: /\b(?:marks?|percentage|score|grade|aggregate|cgpa|gpa|total)[\s:=]+(\d{1,3}(?:\.\d{1,2})?\s?%|\d{1,2}(?:\.\d{1,2})?\s*(?:\/\s*(?:100|10|50))?)\b|\b\d{1,3}(?:\.\d{1,2})?%\b|\b(?:[0-9]|10)\.\d{1,2}\s*(?:cgpa|gpa)\b/i,
+    severity: "Low",
+    confidence: 0.90,
+    priority: "optional",
+    default_keep_visible: true,
+    action: "Blur",
+    explanation: "Academic marks or percentage score detected. Optional redaction (kept visible by default; select checkbox to blur)."
   },
   {
     category: "Personal Information",
@@ -172,11 +191,33 @@ const PATTERNS = [
   // Identity Information
   {
     category: "Identity Information",
-    type: "Aadhaar / SSN / National ID",
-    regex: /\b\d{4}\s\d{4}\s\d{4}\b|\b\d{3}-\d{2}-\d{4}\b|\b[A-Z]{5}\d{4}[A-Z]\b/,
+    type: "Aadhaar Number",
+    regex: /\b[2-9]\d{3}[ -]?\d{4}[ -]?\d{4}\b/,
+    severity: "Critical",
+    confidence: 0.97,
+    priority: "highest",
+    default_keep_visible: false,
+    action: "Solid Blackout",
+    explanation: "12-digit National Identity (Aadhaar) number detected. Highest-priority critical PII; automatically redacted with solid black box."
+  },
+  {
+    category: "Identity Information",
+    type: "Permanent Account Number (PAN)",
+    regex: /\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b/,
+    severity: "Critical",
+    confidence: 0.98,
+    priority: "highest",
+    default_keep_visible: false,
+    action: "Solid Blackout",
+    explanation: "National tax identification (PAN) card detected. Highest-priority fiscal identifier; automatically redacted with solid black box."
+  },
+  {
+    category: "Identity Information",
+    type: "Social Security Number (SSN)",
+    regex: /\b\d{3}-\d{2}-\d{4}\b/,
     severity: "Critical",
     confidence: 0.96,
-    action: "Gaussian Blur",
+    action: "Solid Blackout",
     explanation: "Government-issued identity number detected."
   },
   {
@@ -212,66 +253,108 @@ const PATTERNS = [
 
 export function runClientDetection(tokens) {
   const detections = [];
-  const fullText = tokens.map(t => t.text).join(' ');
+  if (!tokens || tokens.length === 0) return detections;
 
-  // For each pattern, find matches in fullText or token by token
+  // Use line tokens if available to preserve phrases, otherwise words
+  const lineTokens = tokens.filter(t => t.is_line);
+  const textTokens = lineTokens.length > 0 ? lineTokens : tokens;
+  const fullText = textTokens.map(t => t.text).join('\n');
+
   for (const pat of PATTERNS) {
     let match;
     const globalRegex = new RegExp(pat.regex.source, pat.regex.flags.includes('g') ? pat.regex.flags : pat.regex.flags + 'g');
 
+    // 1. Search in concatenated text
     while ((match = globalRegex.exec(fullText)) !== null) {
-      const matchedText = match[0];
+      const matchedText = match[0].trim();
+      if (!matchedText) continue;
       if (pat.validate && !pat.validate(matchedText)) {
         continue;
       }
 
-      // Find tokens that correspond to this match index range
-      const matchStart = match.index;
-      const matchEnd = matchStart + matchedText.length;
-
-      let currentPos = 0;
-      const matchedTokens = [];
-
-      for (const t of tokens) {
-        const tokenStart = currentPos;
-        const tokenEnd = currentPos + t.text.length;
-        currentPos = tokenEnd + 1; // plus space
-
-        if (tokenStart < matchEnd && tokenEnd > matchStart) {
-          matchedTokens.push(t);
+      // Find the most appropriate bounding box from tokens
+      let bestBox = null;
+      const containerToken = tokens.find(t => t.text && (t.text.includes(matchedText) || matchedText.includes(t.text)));
+      if (containerToken && containerToken.box) {
+        bestBox = { ...containerToken.box };
+      } else {
+        const words = matchedText.split(/\s+/).map(w => w.toLowerCase());
+        const matched = tokens.filter(t => t.text && words.some(w => t.text.toLowerCase().includes(w)));
+        if (matched.length > 0) {
+          const xMin = Math.min(...matched.map(t => t.box.x));
+          const yMin = Math.min(...matched.map(t => t.box.y));
+          const xMax = Math.max(...matched.map(t => t.box.x + t.box.width));
+          const yMax = Math.max(...matched.map(t => t.box.y + t.box.height));
+          bestBox = {
+            x: xMin,
+            y: yMin,
+            width: Math.max(12, xMax - xMin),
+            height: Math.max(12, yMax - yMin)
+          };
         }
       }
 
-      // Bounding box: union of matched token boxes
-      let box = { x: 50, y: 50, width: 200, height: 40 };
-      if (matchedTokens.length > 0) {
-        const xMin = Math.min(...matchedTokens.map(t => t.box.x));
-        const yMin = Math.min(...matchedTokens.map(t => t.box.y));
-        const xMax = Math.max(...matchedTokens.map(t => t.box.x + t.box.width));
-        const yMax = Math.max(...matchedTokens.map(t => t.box.y + t.box.height));
-        box = {
-          x: xMin,
-          y: yMin,
-          width: Math.max(10, xMax - xMin),
-          height: Math.max(10, yMax - yMin)
-        };
+      if (!bestBox) {
+        bestBox = { x: 30, y: 30 + detections.length * 40, width: 220, height: 35 };
       }
 
       const id = 'det_' + Math.random().toString(36).substring(2, 9);
+      const priority = pat.priority || (pat.severity === 'Critical' ? 'highest' : 'standard');
+      const keepVisible = pat.default_keep_visible !== undefined ? pat.default_keep_visible : false;
+      const style = pat.action.toLowerCase().includes('blackout') ? 'blackout' : (pat.action.toLowerCase().includes('pixel') ? 'pixelate' : 'blur');
+
       detections.push({
         id,
         category: pat.category,
+        type: pat.type,
         factor_type: pat.type,
         text: matchedText,
         extracted_text: matchedText,
         risk_severity: pat.severity,
         confidence: pat.confidence,
+        priority: priority,
         recommended_action: pat.action,
-        protection_style: pat.action.toLowerCase().includes('blackout') ? 'blackout' : pat.action.toLowerCase().includes('pixel') ? 'pixelate' : 'blur',
-        keep_visible: false,
-        bounding_box: box,
+        protection_style: style,
+        keep_visible: keepVisible,
+        bounding_box: bestBox,
         explanation: pat.explanation
       });
+    }
+
+    // 2. Also search individual tokens
+    for (const t of tokens) {
+      if (!t.text) continue;
+      const tokenMatch = pat.regex.exec(t.text);
+      if (tokenMatch) {
+        const val = tokenMatch[0].trim();
+        if (!val) continue;
+        if (pat.validate && !pat.validate(val)) continue;
+
+        const already = detections.some(d => d.text.includes(val) || val.includes(d.text));
+        if (!already) {
+          const id = 'det_' + Math.random().toString(36).substring(2, 9);
+          const priority = pat.priority || (pat.severity === 'Critical' ? 'highest' : 'standard');
+          const keepVisible = pat.default_keep_visible !== undefined ? pat.default_keep_visible : false;
+          const style = pat.action.toLowerCase().includes('blackout') ? 'blackout' : (pat.action.toLowerCase().includes('pixel') ? 'pixelate' : 'blur');
+
+          detections.push({
+            id,
+            category: pat.category,
+            type: pat.type,
+            factor_type: pat.type,
+            text: val,
+            extracted_text: val,
+            risk_severity: pat.severity,
+            confidence: pat.confidence,
+            priority: priority,
+            recommended_action: pat.action,
+            protection_style: style,
+            keep_visible: keepVisible,
+            bounding_box: t.box || { x: 30, y: 30, width: 200, height: 35 },
+            explanation: pat.explanation
+          });
+        }
+      }
     }
   }
 
@@ -399,29 +482,58 @@ export async function renderProtectedImage(imageSource, detections = [], manualB
           ctx.strokeRect(bx, by, bw, bh);
         }
       } else {
-        // Redaction fallback: smooth blur for any unselected sensitive items
+        // Redaction mode:
+        // Highest-priority (Aadhaar, PAN, Bank Account) = solid black box
+        // Optional items (Email, Phone, Marks) = blur if checked
+        // Manual boxes = user-selected style (blackout, blur, pixelate)
         ctx.drawImage(img, 0, 0);
 
         const toRedact = [
-          ...detections.filter(d => !d.keep_visible).map(d => ({ box: d.bounding_box })),
-          ...manualBoxes.map(b => ({ box: b }))
+          ...detections.filter(d => !d.keep_visible).map(d => ({
+            box: d.bounding_box,
+            style: d.protection_style || (d.priority === 'highest' ? 'blackout' : 'blur')
+          })),
+          ...manualBoxes.map(b => ({
+            box: b,
+            style: b.style || 'blackout'
+          }))
         ];
 
         for (const item of toRedact) {
-          const { box } = item;
+          const { box, style } = item;
           if (!box) continue;
 
-          const pad = 4;
+          const pad = 3;
           const x = Math.max(0, box.x - pad);
           const y = Math.max(0, box.y - pad);
           const rw = Math.min(canvas.width - x, box.width + pad * 2);
           const rh = Math.min(canvas.height - y, box.height + pad * 2);
           if (rw <= 0 || rh <= 0) continue;
 
-          ctx.save();
-          ctx.filter = 'blur(16px)';
-          ctx.drawImage(canvas, x, y, rw, rh, x, y, rw, rh);
-          ctx.restore();
+          if (style === 'blackout') {
+            // Requirement 1 & 3: Solid black boxes
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(x, y, rw, rh);
+          } else if (style === 'pixelate') {
+            // Pixelation mosaic
+            const pixelSize = Math.max(8, Math.min(rw, rh) / 6);
+            ctx.save();
+            ctx.imageSmoothingEnabled = false;
+            // Draw small then stretch back
+            const offCanvas = document.createElement('canvas');
+            offCanvas.width = Math.max(1, Math.floor(rw / pixelSize));
+            offCanvas.height = Math.max(1, Math.floor(rh / pixelSize));
+            const offCtx = offCanvas.getContext('2d');
+            offCtx.drawImage(canvas, x, y, rw, rh, 0, 0, offCanvas.width, offCanvas.height);
+            ctx.drawImage(offCanvas, 0, 0, offCanvas.width, offCanvas.height, x, y, rw, rh);
+            ctx.restore();
+          } else {
+            // Gaussian Blur
+            ctx.save();
+            ctx.filter = 'blur(16px)';
+            ctx.drawImage(canvas, x, y, rw, rh, x, y, rw, rh);
+            ctx.restore();
+          }
         }
       }
 

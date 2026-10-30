@@ -58,6 +58,15 @@ export default function Navbar({ onNavigate, activeTab, isBackendHealthy, onOpen
               Privacy Shield
             </button>
             <button
+              onClick={() => onNavigate('stego')}
+              className={`text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                activeTab === 'stego' ? 'text-cyan-400 font-semibold' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <Lock className="w-3.5 h-3.5 text-cyan-400" />
+              Stego Lab
+            </button>
+            <button
               onClick={onOpenAbout}
               className="text-sm font-medium text-slate-300 hover:text-white transition-colors flex items-center gap-1.5"
             >
@@ -131,10 +140,22 @@ export default function Navbar({ onNavigate, activeTab, isBackendHealthy, onOpen
             How It Works
           </button>
           <button
+            onClick={() => { onNavigate('editor'); setMobileMenuOpen(false); }}
+            className="block w-full text-left px-3 py-2 text-base font-medium text-slate-200 hover:bg-slate-900 rounded-lg"
+          >
+            Privacy Shield
+          </button>
+          <button
+            onClick={() => { onNavigate('stego'); setMobileMenuOpen(false); }}
+            className="block w-full text-left px-3 py-2 text-base font-medium text-cyan-300 hover:bg-slate-900 rounded-lg"
+          >
+            Stego Lab
+          </button>
+          <button
             onClick={() => { onNavigate('upload'); setMobileMenuOpen(false); }}
             className="block w-full text-left px-3 py-2 text-base font-medium text-cyan-400 bg-blue-500/10 rounded-lg"
           >
-            Protect Screenshot
+            Protect Screenshot & Docs
           </button>
           <a
             href="/download/PrivacyLensAI-v1.0-debug.apk"

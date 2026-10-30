@@ -63,8 +63,31 @@ export async function analyzeScreenshot(file, clientOcrTokens = []) {
     console.warn("Backend API unavailable or timed out. Falling back to On-Device Privacy Engine:", err);
   }
 
-  // 2. On-Device Standalone Fallback (100% works on phone, airplane mode, or Vercel static)
-  const detections = runClientDetection(clientOcrTokens);
+  // 2. On-Device Standalone Fallback (100% works on phone, airplane mode, or Vercel/Render static)
+  let activeTokens = clientOcrTokens || [];
+  if (activeTokens.length === 0) {
+    try {
+      const { runClientOcr } = await import('./clientOcr');
+      activeTokens = await runClientOcr(file);
+    } catch (e) {
+      console.warn("On-device OCR fallback error:", e);
+    }
+  }
+
+  // Check if file is a demo sample
+  if (activeTokens.length === 0 && file && file.name) {
+    try {
+      const jsonCandidate = `/samples/${file.name.replace(/\.png$/i, '.ocr.json')}`;
+      const sampleRes = await fetch(jsonCandidate);
+      if (sampleRes.ok) {
+        activeTokens = await sampleRes.json();
+      }
+    } catch (e) {
+      // non-fatal
+    }
+  }
+
+  const detections = runClientDetection(activeTokens);
   const riskAnalysis = calculateRiskScore(detections);
   const protectedImage = await renderProtectedImage(currentImageDataUrl, detections, []);
 
@@ -95,7 +118,7 @@ export async function analyzeScreenshot(file, clientOcrTokens = []) {
     },
     metadata_leaks: {
       has_gps: false,
-      extracted_text_preview: clientOcrTokens.map(t => t.text).join(' ').substring(0, 300)
+      extracted_text_preview: activeTokens.map(t => t.text).join(' ').substring(0, 300)
     }
   };
 }
@@ -165,4 +188,47 @@ export function getDownloadUrl(fileId, format = 'png', protectedImageDataUrl = n
     return protectedImageDataUrl;
   }
   return `${API_BASE_URL}/api/download/${fileId}?format=${format}`;
+}
+
+export async function encodeStegoMessage(imageFile, message, password = null) {
+  const formData = new FormData();
+  formData.append('image', imageFile);
+  formData.append('message', message);
+  if (password) {
+    formData.append('password', password);
+  }
+
+  const res = await fetch(`${API_BASE_URL}/api/stego/encode`, {
+    method: 'POST',
+    body: formData,
+    signal: AbortSignal.timeout(30000)
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || `Steganography encoding failed (${res.status})`);
+  }
+
+  return await res.json();
+}
+
+export async function decodeStegoMessage(imageFile, password = null) {
+  const formData = new FormData();
+  formData.append('image', imageFile);
+  if (password) {
+    formData.append('password', password);
+  }
+
+  const res = await fetch(`${API_BASE_URL}/api/stego/decode`, {
+    method: 'POST',
+    body: formData,
+    signal: AbortSignal.timeout(30000)
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || `Steganography decoding failed (${res.status})`);
+  }
+
+  return await res.json();
 }

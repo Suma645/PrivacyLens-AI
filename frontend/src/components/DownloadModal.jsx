@@ -77,11 +77,40 @@ export default function DownloadModal({ isOpen, onClose, fileId, imageInfo, resi
           </p>
         </div>
 
+        {/* Live Pre-Download Preview Card */}
+        <div className="mb-6 rounded-2xl overflow-hidden border border-slate-700/80 bg-slate-950 p-2.5 shadow-xl relative group">
+          <div className="flex items-center justify-between pb-2 px-1 text-[11px] font-semibold text-slate-400">
+            <span className="flex items-center gap-1.5 text-emerald-400">
+              <Sparkles className="w-3.5 h-3.5" />
+              Live Sanitized Preview (Verification)
+            </span>
+            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">
+              Safe to Export
+            </span>
+          </div>
+
+          <div className="relative rounded-xl overflow-hidden bg-slate-900 flex items-center justify-center max-h-52 border border-slate-800">
+            {protectedImage ? (
+              <img
+                src={protectedImage}
+                alt="Protected Preview"
+                className="max-h-52 w-auto object-contain mx-auto"
+              />
+            ) : (
+              <div className="py-12 text-center text-xs text-slate-500">
+                Generating protected output preview...
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Export Properties Strip */}
         <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs text-slate-300 mb-6">
           <div>
             <span className="text-slate-500">Dimensions: </span>
-            <span className="font-semibold text-white">{imageInfo?.width} × {imageInfo?.height} px</span>
+            <span className="font-semibold text-white">
+              {Array.isArray(imageInfo?.dimensions) ? `${imageInfo.dimensions[0]} × ${imageInfo.dimensions[1]}` : (imageInfo?.width ? `${imageInfo.width} × ${imageInfo.height}` : 'Auto')} px
+            </span>
           </div>
           <div>
             <span className="text-slate-500">Metadata: </span>
@@ -89,7 +118,7 @@ export default function DownloadModal({ isOpen, onClose, fileId, imageInfo, resi
           </div>
           <div>
             <span className="text-slate-500">Security: </span>
-            <span className="font-semibold text-cyan-400">Irreversible</span>
+            <span className="font-semibold text-cyan-400">Permanent Burn-In</span>
           </div>
         </div>
 
@@ -136,29 +165,51 @@ export default function DownloadModal({ isOpen, onClose, fileId, imageInfo, resi
         </div>
 
         {/* Format Selector */}
-        <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs mb-6">
+        <div className="flex flex-wrap items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs mb-6 gap-2">
           <span className="font-semibold text-slate-300">Export Format:</span>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             <button
               onClick={() => setFormat('png')}
-              className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+              className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                 format === 'png'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-white bg-slate-900'
               }`}
             >
-              PNG (Lossless)
+              PNG
             </button>
             <button
               onClick={() => setFormat('jpg')}
-              className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+              className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                 format === 'jpg'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-white bg-slate-900'
               }`}
             >
-              JPG (Compressed)
+              JPG
             </button>
+            <button
+              onClick={() => setFormat('pdf')}
+              className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                format === 'pdf'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white bg-slate-900'
+              }`}
+            >
+              PDF Document
+            </button>
+            {imageInfo?.filename?.toLowerCase().endsWith('.docx') && (
+              <button
+                onClick={() => setFormat('docx')}
+                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                  format === 'docx'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white bg-slate-900'
+                }`}
+              >
+                DOCX (Sanitized)
+              </button>
+            )}
           </div>
         </div>
 

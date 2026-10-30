@@ -153,11 +153,13 @@ class SensitiveDetector:
             {
                 "category": "Financial Information",
                 "type": "Bank Account / IBAN",
-                "regex": re.compile(r"\b[A-Z]{2}\d{2}[A-Z0-9]{4}\d{7}([A-Z0-9]?){0,16}\b|\b(?:account\s*(?:no|num|number)?[\s:#]+)(\d{8,18})\b", re.IGNORECASE),
-                "severity": "High",
-                "confidence": 0.91,
-                "action": "Blur",
-                "explanation": "Bank account number or international IBAN identifier detected. Exposes banking records and wire transfer vectors."
+                "regex": re.compile(r"\b[A-Z]{2}\d{2}[A-Z0-9]{4}\d{7}([A-Z0-9]?){0,16}\b|\b(?:account|acct|a\/c)\s*(?:no|num|number)?[\s:#]+(\d{8,18})\b", re.IGNORECASE),
+                "severity": "Critical",
+                "confidence": 0.96,
+                "priority": "highest",
+                "default_keep_visible": False,
+                "action": "Solid Blackout",
+                "explanation": "Bank account number detected. Highest-priority critical financial record; automatically redacted with solid black box."
             },
             {
                 "category": "Financial Information",
@@ -191,20 +193,24 @@ class SensitiveDetector:
             {
                 "category": "Identity Information",
                 "type": "Aadhaar Number",
-                "regex": re.compile(r"\b[2-9]\d{3}\s\d{4}\s\d{4}\b"),
+                "regex": re.compile(r"\b[2-9]\d{3}[ -]?\d{4}[ -]?\d{4}\b"),
                 "severity": "Critical",
-                "confidence": 0.93,
-                "action": "Gaussian Blur",
-                "explanation": "12-digit National Identity (Aadhaar) number detected. Exposure facilitates impersonation and unauthorized KYC queries."
+                "confidence": 0.97,
+                "priority": "highest",
+                "default_keep_visible": False,
+                "action": "Solid Blackout",
+                "explanation": "12-digit National Identity (Aadhaar) number detected. Highest-priority critical PII; automatically redacted with solid black box."
             },
             {
                 "category": "Identity Information",
                 "type": "Permanent Account Number (PAN)",
                 "regex": re.compile(r"\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b"),
-                "severity": "High",
-                "confidence": 0.94,
-                "action": "Gaussian Blur",
-                "explanation": "National tax identification (PAN) card number detected. Exposes fiscal identity and tax records."
+                "severity": "Critical",
+                "confidence": 0.98,
+                "priority": "highest",
+                "default_keep_visible": False,
+                "action": "Solid Blackout",
+                "explanation": "National tax identification (PAN) card detected. Highest-priority fiscal identifier; automatically redacted with solid black box."
             },
             {
                 "category": "Identity Information",
@@ -241,8 +247,10 @@ class SensitiveDetector:
                 "regex": re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b"),
                 "severity": "Medium",
                 "confidence": 0.97,
+                "priority": "optional",
+                "default_keep_visible": True,
                 "action": "Blur",
-                "explanation": "Email address detected. Can be targeted for targeted spear-phishing, credential stuffing, and spam."
+                "explanation": "Email address detected. Optional redaction (kept visible by default; select checkbox to blur)."
             },
             {
                 "category": "Personal Information",
@@ -250,8 +258,21 @@ class SensitiveDetector:
                 "regex": re.compile(r"(?:(?:\+?[1-9]\d{0,2}[ -]?)?(?:\(?\d{3}\)?[ -]?|\b\d{3}[ -]?)\d{3}[ -]?\d{4}\b)|(?:\b[6-9]\d{9}\b)"),
                 "severity": "Medium",
                 "confidence": 0.92,
+                "priority": "optional",
+                "default_keep_visible": True,
                 "action": "Blur",
-                "explanation": "Direct phone or mobile contact number detected. Exposes user to SIM swapping, unsolicited calls, and smishing attacks."
+                "explanation": "Phone contact number detected. Optional redaction (kept visible by default; select checkbox to blur)."
+            },
+            {
+                "category": "Personal Information",
+                "type": "Marks / Percentage / Score",
+                "regex": re.compile(r"(?i)\b(?:marks?|percentage|score|grade|aggregate|cgpa|gpa|total)[\s:=]+(\d{1,3}(?:\.\d{1,2})?\s?%|\d{1,2}(?:\.\d{1,2})?\s*(?:\/\s*(?:100|10|50))?)\b|\b\d{1,3}(?:\.\d{1,2})?%\b|\b(?:[0-9]|10)\.\d{1,2}\s*(?:cgpa|gpa)\b"),
+                "severity": "Low",
+                "confidence": 0.90,
+                "priority": "optional",
+                "default_keep_visible": True,
+                "action": "Blur",
+                "explanation": "Academic marks or percentage score detected. Optional redaction (kept visible by default; select checkbox to blur)."
             },
             {
                 "category": "Personal Information",
@@ -355,9 +376,10 @@ class SensitiveDetector:
                     "confidence": rule["confidence"],
                     "bounding_box": bounding_box or {"x": 0, "y": 0, "width": 100, "height": 30},
                     "recommended_action": rule["action"],
-                    "explanation": rule["explanation"],
-                    "keep_visible": False, # Core principle: user chooses what to share, protected by default!
-                    "protection_style": "blur"
+                    "priority": rule.get("priority", "standard"),
+                    "keep_visible": rule.get("default_keep_visible", False),
+                    "protection_style": "blackout" if rule.get("action") == "Solid Blackout" else ("pixelate" if rule.get("action") == "Pixelate" else "blur"),
+                    "explanation": rule["explanation"]
                 })
 
         return findings
@@ -407,9 +429,10 @@ class SensitiveDetector:
                         "confidence": rule["confidence"],
                         "bounding_box": matched_box,
                         "recommended_action": rule["action"],
-                        "explanation": rule["explanation"],
-                        "keep_visible": False,
-                        "protection_style": "blur"
+                        "priority": rule.get("priority", "standard"),
+                        "keep_visible": rule.get("default_keep_visible", False),
+                        "protection_style": "blackout" if rule.get("action") == "Solid Blackout" else ("pixelate" if rule.get("action") == "Pixelate" else "blur"),
+                        "explanation": rule["explanation"]
                     })
 
         return all_detections
