@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: snapshield-api
+    name: privacylens-api
     runtime: python
     plan: free
     buildCommand: "pip install -r backend/requirements.txt"

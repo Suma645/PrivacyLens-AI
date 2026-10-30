@@ -1,5 +1,5 @@
-// SnapShield Service Worker - PWA & Safe Caching Policy
-const CACHE_NAME = 'snapshield-app-v1.0.0';
+// Privacy Lens AI Service Worker - PWA & Safe Caching Policy
+const CACHE_NAME = 'privacylens-app-v1.0.0';
 
 // Assets to pre-cache for instant standalone shell loading
 const STATIC_ASSETS = [
@@ -46,7 +46,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request).catch(() => {
         return new Response(
-          JSON.stringify({ error: 'Network unavailable. Please reconnect to reach SnapShield privacy backend.' }),
+          JSON.stringify({ error: 'Network unavailable. Please reconnect to reach Privacy Lens AI privacy backend.' }),
           { status: 503, headers: { 'Content-Type': 'application/json' } }
         );
       })

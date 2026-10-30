@@ -1,4 +1,4 @@
-// API Client for SnapShield Backend with Seamless On-Device Privacy Fallback
+// API Client for Privacy Lens AI Backend with Seamless On-Device Privacy Fallback
 import { runClientDetection, calculateRiskScore, renderProtectedImage } from './clientDetector';
 
 const rawBase = import.meta.env.VITE_API_BASE_URL || '';
@@ -52,7 +52,7 @@ export async function analyzeScreenshot(file, clientOcrTokens = []) {
     const res = await fetch(`${API_BASE_URL}/api/analyze`, {
       method: 'POST',
       body: formData,
-      signal: AbortSignal.timeout(6000)
+      signal: AbortSignal.timeout(30000)
     });
 
     if (res.ok) {
@@ -80,14 +80,20 @@ export async function analyzeScreenshot(file, clientOcrTokens = []) {
       file_size_kb: Math.round(file.size / 1024)
     },
     detections: detections,
-    risk_analysis: riskAnalysis,
+    confidentiality_score: riskAnalysis.score,
+    risk_classification: riskAnalysis.classification,
+    score_color: riskAnalysis.color,
+    breakdown: riskAnalysis.breakdown,
+    category_breakdown: riskAnalysis.category_breakdown,
+    score_explanation: riskAnalysis.explanation,
+    factor_reasons: riskAnalysis.factor_reasons,
     residual_risk: {
       residual_score: 0,
       classification: "Low Risk",
       color: "#10b981",
       unprotected_count: 0
     },
-    metadata_findings: {
+    metadata_leaks: {
       has_gps: false,
       extracted_text_preview: clientOcrTokens.map(t => t.text).join(' ').substring(0, 300)
     }

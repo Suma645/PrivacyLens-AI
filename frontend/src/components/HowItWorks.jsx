@@ -19,10 +19,10 @@ export default function HowItWorks({ onStart }) {
       <div className="text-center max-w-3xl mx-auto">
         <span className="text-xs uppercase tracking-widest text-cyan-400 font-bold">Privacy Architecture</span>
         <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-2">
-          How SnapShield Protects Your Digital Identity
+          How Privacy Lens AI Protects Your Digital Identity
         </h2>
         <p className="text-base text-slate-300 mt-3 leading-relaxed">
-          Traditional redaction tools rely on manual black marker tools where users often miss sensitive tokens, IP addresses, or QR codes. SnapShield turns the security model upside down.
+          Traditional redaction tools rely on manual black marker tools where users often miss sensitive tokens, IP addresses, or QR codes. Privacy Lens AI turns the security model upside down.
         </p>
       </div>
 
@@ -37,7 +37,7 @@ export default function HowItWorks({ onStart }) {
             </div>
             <h3 className="text-2xl font-bold text-white mb-3">1. Smart Multi-Vector Detection</h3>
             <p className="text-sm text-slate-300 leading-relaxed">
-              When a screenshot is dropped into SnapShield, our hybrid computer vision and OCR engine extracts all readable text while simultaneously detecting human facial biometric markers, QR codes, and device EXIF location tags.
+              When a screenshot is dropped into Privacy Lens AI, our hybrid computer vision and OCR engine extracts all readable text while simultaneously detecting human facial biometric markers, QR codes, and device EXIF location tags.
             </p>
             <ul className="mt-4 space-y-2 text-xs text-slate-400">
               <li className="flex items-center gap-2">
@@ -99,7 +99,7 @@ export default function HowItWorks({ onStart }) {
             </div>
             <h3 className="text-2xl font-bold text-white mb-3">2. Confidentiality Index Assessment</h3>
             <p className="text-sm text-slate-300 leading-relaxed">
-              SnapShield calculates a transparent 0 to 100 risk score based on severity, detection confidence, and cross-category exposure compounding. You get clear, plain-English explanations for every risk factor found.
+              Privacy Lens AI calculates a transparent 0 to 100 risk score based on severity, detection confidence, and cross-category exposure compounding. You get clear, plain-English explanations for every risk factor found.
             </p>
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
               <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
@@ -122,7 +122,7 @@ export default function HowItWorks({ onStart }) {
             </div>
             <h3 className="text-2xl font-bold text-white mb-3">3. You Choose What to Share</h3>
             <p className="text-sm text-slate-300 leading-relaxed">
-              Instead of painstakingly finding each secret to hide, SnapShield <strong>protects everything by default</strong>. You only click the exact message or region you want the recipient to see.
+              Instead of painstakingly finding each secret to hide, Privacy Lens AI <strong>protects everything by default</strong>. You only click the exact message or region you want the recipient to see.
             </p>
             <ul className="mt-4 space-y-2 text-xs text-slate-400">
               <li className="flex items-center gap-2">
@@ -141,7 +141,7 @@ export default function HowItWorks({ onStart }) {
           </div>
 
           <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 text-center space-y-4">
-            <div className="text-xs text-slate-400">Residual Risk with SnapShield:</div>
+            <div className="text-xs text-slate-400">Residual Risk with Privacy Lens AI:</div>
             <div className="text-4xl font-extrabold text-emerald-400 tracking-tight">0 / 100</div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold border border-emerald-500/30">
               <ShieldCheck className="w-4 h-4" />

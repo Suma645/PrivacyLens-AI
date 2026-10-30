@@ -43,7 +43,7 @@ export default function DownloadModal({ isOpen, onClose, fileId, imageInfo, resi
     const url = getDownloadUrl(fileId, format, protectedImage);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `snapshield-protected-${Date.now()}.${format}`;
+    link.download = `privacylens-protected-${Date.now()}.${format}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

@@ -38,7 +38,7 @@ export default function InstallPwaPrompt() {
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
       // Fallback instruction for browsers that don't support automated prompt (e.g. iOS Safari)
-      alert('To install SnapShield on your phone:\n1. Tap the Share or 3-dots Menu button in your browser.\n2. Tap "Install application" or "Add to Home Screen".');
+      alert('To install Privacy Lens AI on your phone:\n1. Tap the Share or 3-dots Menu button in your browser.\n2. Tap "Install application" or "Add to Home Screen".');
       return;
     }
 
@@ -62,7 +62,7 @@ export default function InstallPwaPrompt() {
             <Smartphone className="w-4 h-4" />
           </div>
           <div>
-            <span className="font-bold text-white block sm:inline">Install SnapShield on Android:</span>
+            <span className="font-bold text-white block sm:inline">Install Privacy Lens AI on Android:</span>
             <span className="text-slate-300 sm:ml-1 hidden sm:inline">
               Get the standalone mobile app with home screen icon & zero-browser clutter.
             </span>
@@ -77,6 +77,14 @@ export default function InstallPwaPrompt() {
             <Download className="w-3.5 h-3.5" />
             <span>Install App</span>
           </button>
+
+          <a
+            href="/download/PrivacyLensAI-v1.0-debug.apk"
+            download="PrivacyLensAI-v1.0-debug.apk"
+            className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-cyan-300 border border-cyan-500/30 text-xs font-semibold transition-all"
+          >
+            <span>Download APK</span>
+          </a>
           
           <button
             onClick={() => setIsDismissed(true)}

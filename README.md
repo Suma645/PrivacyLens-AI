@@ -1,19 +1,19 @@
-# SnapShield – Smart Screenshot Privacy Protector
+# Privacy Lens AI – Smart Screenshot Privacy Protector
 
-> **"The user chooses what to share. SnapShield protects everything else."**
+> **"The user chooses what to share. Privacy Lens AI protects everything else."**
 
-![SnapShield Cybersecurity Dashboard](https://img.shields.io/badge/Security-Zero--Storage-blue?style=for-the-badge&logo=shield)
+![Privacy Lens AI Cybersecurity Dashboard](https://img.shields.io/badge/Security-Zero--Storage-blue?style=for-the-badge&logo=shield)
 ![Status](https://img.shields.io/badge/Status-Production--Ready-emerald?style=for-the-badge)
 ![Vercel](https://img.shields.io/badge/Deploy-Vercel-black?style=for-the-badge&logo=vercel)
 ![Render](https://img.shields.io/badge/Deploy-Render-46E3B7?style=for-the-badge&logo=render)
 
-SnapShield is an enterprise-grade screenshot privacy sanitization platform. It protects users from accidentally exposing banking credentials, payment cards, cloud access tokens, passwords, customer personal identities (PII), and biometric faces before sharing screenshots across Slack, WhatsApp, Twitter/X, Discord, or public support forums.
+Privacy Lens AI is an enterprise-grade screenshot privacy sanitization platform. It protects users from accidentally exposing banking credentials, payment cards, cloud access tokens, passwords, customer personal identities (PII), and biometric faces before sharing screenshots across Slack, WhatsApp, Twitter/X, Discord, or public support forums.
 
 ---
 
 ## 🌟 Architecture & Core Innovations
 
-SnapShield is built on the **PrivacyLens AI 3-Pillar Security Model** presented at the **Tech-ಶೋಧ Technical Hackathon (ECE Department, Vidyavardhaka College of Engineering, Mysuru)**:
+Privacy Lens AI is built on the **Privacy Lens AI 3-Pillar Security Model** presented at the **Tech-ಶೋಧ Technical Hackathon (ECE Department, Vidyavardhaka College of Engineering, Mysuru)**:
 
 ```
 [1. SCAN & DETECT]       ──>      [2. ANALYSE & ASSESS]      ──>      [3. REDACT & PROTECT]
@@ -24,7 +24,7 @@ SnapShield is built on the **PrivacyLens AI 3-Pillar Security Model** presented 
 ```
 
 ### 1. Inverted Privacy Model (Zero-Accident Design)
-Traditional redaction tools require users to spot and draw boxes around sensitive items manually—leading to catastrophic human error. SnapShield **inverts the workflow**:
+Traditional redaction tools require users to spot and draw boxes around sensitive items manually—leading to catastrophic human error. Privacy Lens AI **inverts the workflow**:
 - Every detected sensitive element is **redacted by default**.
 - The user only clicks what they **explicitly wish to share**.
 - Everything else remains cryptographically flattened and blurred.

@@ -1,6 +1,6 @@
 {
-  "name": "SnapShield – Smart Screenshot Privacy Protector",
-  "short_name": "SnapShield",
+  "name": "Privacy Lens AI – Smart Screenshot Privacy Protector",
+  "short_name": "Privacy Lens AI",
   "description": "Enterprise-grade screenshot privacy protector. Automatically detects confidential data and selectively redacts everything except what you choose to share.",
   "start_url": "/",
   "id": "/",

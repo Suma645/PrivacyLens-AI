@@ -3,10 +3,14 @@ import numpy as np
 import os
 import shutil
 import json
+import subprocess
+import tempfile
 
 class OCRService:
     def __init__(self, tesseract_cmd=None):
         self.pytesseract_available = False
+        self.win_ocr_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bin", "win_ocr.exe")
+        self.win_ocr_available = os.path.exists(self.win_ocr_path)
         self.tesseract_cmd = tesseract_cmd or os.environ.get("TESSERACT_CMD", r"C:\Program Files\Tesseract-OCR\tesseract.exe")
         
         try:
@@ -27,7 +31,7 @@ class OCRService:
             self.pytesseract_available = False
 
     def is_engine_ready(self):
-        return self.pytesseract_available
+        return self.win_ocr_available or self.pytesseract_available
 
     def extract_text_and_boxes(self, pil_image, cv_image=None, client_ocr_tokens=None, filename=None):
         """
@@ -35,8 +39,9 @@ class OCRService:
         Prioritizes:
         1. Client OCR tokens if provided by browser (e.g. fast Tesseract.js wasm)
         2. Companion OCR annotations (for sample test screenshots)
-        3. Local PyTesseract if tesseract executable is installed
-        4. OpenCV morphological text region detection
+        3. Windows Native Hardware-Accelerated OCR engine (win_ocr.exe)
+        4. Local PyTesseract if tesseract executable is installed
+        5. OpenCV morphological text region detection
         """
         if client_ocr_tokens and len(client_ocr_tokens) > 0:
             return client_ocr_tokens
@@ -53,6 +58,28 @@ class OCRService:
                 except Exception:
                     pass
 
+        # 3. Windows Native OCR Engine (Built-in Windows 10/11 WinRT OCR)
+        if self.win_ocr_available and pil_image is not None:
+            try:
+                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                    tmp_path = tmp.name
+                
+                pil_image.save(tmp_path, format="PNG")
+                proc = subprocess.run([self.win_ocr_path, tmp_path], capture_output=True, text=True, timeout=12)
+                
+                try:
+                    os.remove(tmp_path)
+                except Exception:
+                    pass
+
+                if proc.returncode == 0 and proc.stdout.strip():
+                    tokens = json.loads(proc.stdout)
+                    if tokens and len(tokens) > 0:
+                        return tokens
+            except Exception as e:
+                print(f"Windows Native OCR extraction error: {e}")
+
+        # 4. PyTesseract if available (Linux / Render / Ubuntu)
         if self.pytesseract_available and self.pytesseract is not None:
             try:
                 rgb_img = pil_image.convert('RGB')
@@ -79,7 +106,7 @@ class OCRService:
             except Exception as e:
                 print(f"PyTesseract error during extraction: {e}")
 
-        # Fallback: OpenCV Morphological Text Region Detector
+        # 5. Fallback: OpenCV Morphological Text Region Detector
         if cv_image is not None:
             return self._detect_text_regions_cv(cv_image)
 

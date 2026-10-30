@@ -33,7 +33,7 @@ export default function AboutModal({ isOpen, onClose }) {
             <ShieldCheck className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-white">About SnapShield</h3>
+            <h3 className="text-2xl font-bold text-white">About Privacy Lens AI</h3>
             <p className="text-xs text-cyan-400 font-mono">PrivacyLens AI Architecture • Zero-Storage Security</p>
           </div>
         </div>
@@ -49,7 +49,7 @@ export default function AboutModal({ isOpen, onClose }) {
             </h4>
             <p className="text-slate-400 leading-relaxed text-xs">
               Every day, millions of screenshots are shared on Slack, WhatsApp, Twitter/X, and forums containing accidentally exposed credit cards, authentication tokens, API keys, private conversations, and GPS metadata.
-              SnapShield solves this through a fundamental shift in privacy logic: <strong>You choose what to share; SnapShield automatically protects everything else.</strong>
+              Privacy Lens AI solves this through a fundamental shift in privacy logic: <strong>You choose what to share; Privacy Lens AI automatically protects everything else.</strong>
             </p>
           </div>
 

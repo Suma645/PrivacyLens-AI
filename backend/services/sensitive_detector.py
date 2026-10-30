@@ -93,6 +93,33 @@ class SensitiveDetector:
                 "action": "Solid Blackout",
                 "explanation": "Time-based authentication code detected. Enables real-time two-factor authentication bypass."
             },
+            {
+                "category": "Authentication Information",
+                "type": "API Key / Token Reference",
+                "regex": re.compile(r"\b(?:api[_\s-]?tokens?|cloud\s*api\s*keys?|access[_\s-]?tokens?|secret[_\s-]?keys?|bearer\s*tokens?|auth[_\s-]?tokens?|\.env\b)", re.IGNORECASE),
+                "severity": "Critical",
+                "confidence": 0.96,
+                "action": "Solid Blackout",
+                "explanation": "Reference to API tokens, cloud keys, or environment secrets detected."
+            },
+            {
+                "category": "Authentication Information",
+                "type": "Password / Credential Reference",
+                "regex": re.compile(r"\b(?:passwords?|passcodes?|pin\s*codes?|login\s*credentials?|auth\s*credentials?|secret\s*passphrase)\b", re.IGNORECASE),
+                "severity": "High",
+                "confidence": 0.94,
+                "action": "Solid Blackout",
+                "explanation": "Reference to password or login credentials detected."
+            },
+            {
+                "category": "Authentication Information",
+                "type": "Authentication Factor / OTP Reference",
+                "regex": re.compile(r"\b(?:one[- ]time\s*passwords?|phone\s*&\s*otp|chat,\s*phone\s*&\s*otp|2fa\s*codes?|mfa\s*tokens?|verification\s*codes?)\b", re.IGNORECASE),
+                "severity": "High",
+                "confidence": 0.92,
+                "action": "Solid Blackout",
+                "explanation": "Reference to OTP, multi-factor, or phone verification authentication detected."
+            },
 
             # ================= B. Financial Information =================
             {
@@ -141,6 +168,15 @@ class SensitiveDetector:
                 "action": "Blur",
                 "explanation": "Public cryptocurrency wallet address detected. Enables public blockchain balance and transaction tracking."
             },
+            {
+                "category": "Financial Information",
+                "type": "Banking & Payment Details Reference",
+                "regex": re.compile(r"\b(?:banking\s*details|bank\s*details|bank\s*&\s*credit\s*card|credit\s*cards?|debit\s*cards?|financial\s*records?|bank\s*statements?|account\s*details?|wire\s*transfers?|account\s*balance)\b", re.IGNORECASE),
+                "severity": "High",
+                "confidence": 0.95,
+                "action": "Solid Blackout",
+                "explanation": "Reference to banking details, credit cards, or financial accounts detected."
+            },
 
             # ================= D. Identity Information =================
             {
@@ -188,6 +224,15 @@ class SensitiveDetector:
                 "action": "Blur",
                 "explanation": "Organizational or institutional identifier detected. Reveals internal enterprise employment status."
             },
+            {
+                "category": "Identity Information",
+                "type": "Personal Identity Reference",
+                "regex": re.compile(r"\b(?:personal\s*identit(?:y|ies)|identifying\s*information|confidential\s*identit(?:y|ies)|national\s*id|identity\s*cards?|government\s*ids?)\b", re.IGNORECASE),
+                "severity": "High",
+                "confidence": 0.94,
+                "action": "Blur",
+                "explanation": "Reference to personally identifiable or individual identity records detected."
+            },
 
             # ================= A. Personal Information =================
             {
@@ -226,6 +271,15 @@ class SensitiveDetector:
                 "action": "Blur",
                 "explanation": "Individual name identified in context. Personally identifiable information (PII)."
             },
+            {
+                "category": "Personal Information",
+                "type": "Personal Communications & Contacts Reference",
+                "regex": re.compile(r"\b(?:personal\s*contacts?|private\s*messages?|private\s*chats?|chat,\s*phone\s*&\s*otp|personal\s*emails?|private\s*photos?)\b", re.IGNORECASE),
+                "severity": "Medium",
+                "confidence": 0.91,
+                "action": "Blur",
+                "explanation": "Reference to personal contact channels or private communications detected."
+            },
 
             # ================= E. Confidential Information =================
             {
@@ -236,6 +290,15 @@ class SensitiveDetector:
                 "confidence": 0.98,
                 "action": "Solid Blackout",
                 "explanation": "Enterprise confidentiality or trade secret marking detected. Unauthorized dissemination violates non-disclosure agreements."
+            },
+            {
+                "category": "Confidential Information",
+                "type": "Confidentiality Risk / Sensitive Privacy Data",
+                "regex": re.compile(r"\b(?:confidentiality\s*risks?|confidential\s*data|confidential\s*information|privacy\s*risks?|sensitive\s*data|sensitive\s*information|trade\s*secrets?)\b", re.IGNORECASE),
+                "severity": "Medium",
+                "confidence": 0.92,
+                "action": "Blur",
+                "explanation": "Discussion or designation of confidential risk and sensitive data detected."
             },
             {
                 "category": "Confidential Information",
@@ -352,31 +415,63 @@ class SensitiveDetector:
         return all_detections
 
     def _find_approximate_box_for_text(self, text, ocr_data):
-        """Finds bounding box enclosing the tokens corresponding to text."""
-        words = text.split()
-        if not words or not ocr_data:
+        """Finds bounding box enclosing the tokens corresponding to text sequence."""
+        if not text or not ocr_data:
             return {"x": 10, "y": 10, "width": 150, "height": 30}
-        
-        boxes = []
-        for w in words:
+
+        target_words = [w.lower().strip(".,;:?!'\"()[]{}") for w in text.split()]
+        target_words = [w for w in target_words if w]
+        if not target_words:
+            return ocr_data[0].get("box", {"x": 10, "y": 10, "width": 150, "height": 30})
+
+        n = len(ocr_data)
+        # Search for consecutive subsequence match in ocr_data
+        for i in range(n):
+            matched_boxes = []
+            target_idx = 0
+            for j in range(i, min(n, i + len(target_words) + 4)):
+                token_text = ocr_data[j].get("text", "").lower().strip(".,;:?!'\"()[]{}")
+                if not token_text:
+                    continue
+                if target_idx < len(target_words) and (target_words[target_idx] in token_text or token_text in target_words[target_idx]):
+                    matched_boxes.append(ocr_data[j].get("box"))
+                    target_idx += 1
+                    if target_idx == len(target_words):
+                        min_x = min(b["x"] for b in matched_boxes)
+                        min_y = min(b["y"] for b in matched_boxes)
+                        max_x = max(b["x"] + b["width"] for b in matched_boxes)
+                        max_y = max(b["y"] + b["height"] for b in matched_boxes)
+                        return {
+                            "x": int(min_x),
+                            "y": int(min_y),
+                            "width": max(10, int(max_x - min_x)),
+                            "height": max(10, int(max_y - min_y))
+                        }
+
+        # Fallback to nearest cluster of words on similar y coordinate
+        candidate_boxes = []
+        for w in target_words:
             for item in ocr_data:
-                if w.lower() in item.get("text", "").lower():
+                token_clean = item.get("text", "").lower().strip(".,;:?!'\"()[]{}")
+                if w in token_clean or token_clean in w:
                     b = item.get("box")
                     if b:
-                        boxes.append(b)
-                    break
-        
-        if not boxes:
-            return ocr_data[0].get("box", {"x": 10, "y": 10, "width": 150, "height": 30})
-        
-        min_x = min(b["x"] for b in boxes)
-        min_y = min(b["y"] for b in boxes)
-        max_x = max(b["x"] + b["width"] for b in boxes)
-        max_y = max(b["y"] + b["height"] for b in boxes)
-        
-        return {
-            "x": int(min_x),
-            "y": int(min_y),
-            "width": max(10, int(max_x - min_x)),
-            "height": max(10, int(max_y - min_y))
-        }
+                        candidate_boxes.append(b)
+                        break
+
+        if candidate_boxes:
+            median_y = sorted([b["y"] for b in candidate_boxes])[len(candidate_boxes) // 2]
+            close_boxes = [b for b in candidate_boxes if abs(b["y"] - median_y) < 60]
+            boxes_to_use = close_boxes if close_boxes else candidate_boxes
+            min_x = min(b["x"] for b in boxes_to_use)
+            min_y = min(b["y"] for b in boxes_to_use)
+            max_x = max(b["x"] + b["width"] for b in boxes_to_use)
+            max_y = max(b["y"] + b["height"] for b in boxes_to_use)
+            return {
+                "x": int(min_x),
+                "y": int(min_y),
+                "width": max(10, int(max_x - min_x)),
+                "height": max(10, int(max_y - min_y))
+            }
+
+        return ocr_data[0].get("box", {"x": 10, "y": 10, "width": 150, "height": 30})

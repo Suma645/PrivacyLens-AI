@@ -1,6 +1,6 @@
 {
-  "appId": "com.snapshield.app",
-  "appName": "SnapShield",
+  "appId": "com.privacylens.app",
+  "appName": "Privacy Lens AI",
   "webDir": "dist",
   "server": {
     "androidScheme": "https",

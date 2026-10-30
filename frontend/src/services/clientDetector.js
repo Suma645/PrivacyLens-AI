@@ -73,6 +73,33 @@ const PATTERNS = [
     action: "Solid Blackout",
     explanation: "Time-based authentication code detected."
   },
+  {
+    category: "Authentication Information",
+    type: "API Key / Token Reference",
+    regex: /\b(?:api[_\s-]?tokens?|cloud\s*api\s*keys?|access[_\s-]?tokens?|secret[_\s-]?keys?|bearer\s*tokens?|auth[_\s-]?tokens?|\.env\b)/i,
+    severity: "Critical",
+    confidence: 0.96,
+    action: "Solid Blackout",
+    explanation: "Reference to API tokens, cloud keys, or environment secrets detected."
+  },
+  {
+    category: "Authentication Information",
+    type: "Password / Credential Reference",
+    regex: /\b(?:passwords?|passcodes?|pin\s*codes?|login\s*credentials?|auth\s*credentials?|secret\s*passphrase)\b/i,
+    severity: "High",
+    confidence: 0.94,
+    action: "Solid Blackout",
+    explanation: "Reference to password or login credentials detected."
+  },
+  {
+    category: "Authentication Information",
+    type: "Authentication Factor / OTP Reference",
+    regex: /\b(?:one[- ]time\s*passwords?|phone\s*&\s*otp|chat,\s*phone\s*&\s*otp|2fa\s*codes?|mfa\s*tokens?|verification\s*codes?)\b/i,
+    severity: "High",
+    confidence: 0.92,
+    action: "Solid Blackout",
+    explanation: "Reference to OTP, multi-factor, or phone verification authentication detected."
+  },
 
   // Financial
   {
@@ -103,6 +130,15 @@ const PATTERNS = [
     action: "Pixelate",
     explanation: "Bank account or international identifier detected."
   },
+  {
+    category: "Financial Information",
+    type: "Banking & Payment Details Reference",
+    regex: /\b(?:banking\s*details|bank\s*details|bank\s*&\s*credit\s*card|credit\s*cards?|debit\s*cards?|financial\s*records?|bank\s*statements?|account\s*details?|wire\s*transfers?|account\s*balance)\b/i,
+    severity: "High",
+    confidence: 0.95,
+    action: "Solid Blackout",
+    explanation: "Reference to banking details, credit cards, or financial accounts detected."
+  },
 
   // Personal Information
   {
@@ -123,6 +159,15 @@ const PATTERNS = [
     action: "Gaussian Blur",
     explanation: "Direct telephone contact number detected."
   },
+  {
+    category: "Personal Information",
+    type: "Personal Contacts & Communications",
+    regex: /\b(?:personal\s*contacts?|private\s*messages?|private\s*chats?|chat,\s*phone\s*&\s*otp|personal\s*emails?|private\s*photos?)\b/i,
+    severity: "Medium",
+    confidence: 0.91,
+    action: "Gaussian Blur",
+    explanation: "Reference to personal contact channels or private communications detected."
+  },
 
   // Identity Information
   {
@@ -134,6 +179,15 @@ const PATTERNS = [
     action: "Solid Blackout",
     explanation: "Government-issued identity number detected."
   },
+  {
+    category: "Identity Information",
+    type: "Personal Identity Reference",
+    regex: /\b(?:personal\s*identit(?:y|ies)|identifying\s*information|confidential\s*identit(?:y|ies)|national\s*id|identity\s*cards?|government\s*ids?)\b/i,
+    severity: "High",
+    confidence: 0.94,
+    action: "Gaussian Blur",
+    explanation: "Reference to personally identifiable or individual identity records detected."
+  },
 
   // Confidential Information
   {
@@ -144,6 +198,15 @@ const PATTERNS = [
     confidence: 0.95,
     action: "Gaussian Blur",
     explanation: "Confidentiality designation marker detected."
+  },
+  {
+    category: "Confidential Information",
+    type: "Confidentiality Risk / Sensitive Privacy Data",
+    regex: /\b(?:confidentiality\s*risks?|confidential\s*data|confidential\s*information|privacy\s*risks?|sensitive\s*data|sensitive\s*information|trade\s*secrets?)\b/i,
+    severity: "Medium",
+    confidence: 0.92,
+    action: "Gaussian Blur",
+    explanation: "Discussion or designation of confidential risk and sensitive data detected."
   }
 ];
 
@@ -200,6 +263,7 @@ export function runClientDetection(tokens) {
         category: pat.category,
         factor_type: pat.type,
         text: matchedText,
+        extracted_text: matchedText,
         risk_severity: pat.severity,
         confidence: pat.confidence,
         recommended_action: pat.action,

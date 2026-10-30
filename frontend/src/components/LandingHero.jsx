@@ -45,13 +45,13 @@ export default function LandingHero({ onStartUpload, onHowItWorks, onLoadSample 
 
           <p className="mt-6 text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto font-normal leading-relaxed">
             Stop accidentally leaking banking details, API tokens, passwords, and personal identities.
-            <strong className="text-white font-medium"> SnapShield </strong> automatically scans screenshots, evaluates confidentiality risk, and blurs everything except what you explicitly choose to share.
+            <strong className="text-white font-medium"> Privacy Lens AI </strong> automatically scans screenshots, evaluates confidentiality risk, and blurs everything except what you explicitly choose to share.
           </p>
 
           {/* Core Principle Callout */}
           <div className="mt-5 inline-block px-4 py-2 rounded-xl bg-blue-950/40 border border-blue-500/30 text-xs sm:text-sm text-blue-200">
             <span className="font-bold text-cyan-400">Core Principle: </span>
-            You choose what to share. SnapShield automatically protects everything else.
+            You choose what to share. Privacy Lens AI automatically protects everything else.
           </div>
 
           {/* Primary & Secondary Action Buttons */}

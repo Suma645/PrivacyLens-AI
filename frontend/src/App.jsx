@@ -50,11 +50,13 @@ export default function App() {
     setUploadProgress(15);
 
     try {
-      // 1. Try fast client-side OCR for instantaneous token bounding boxes
+      // 1. Try fast client-side OCR (with 3.5s quick cutoff so backend is not delayed)
       let clientTokens = [];
       try {
         setUploadProgress(30);
-        clientTokens = await runClientOcr(file);
+        const ocrPromise = runClientOcr(file);
+        const timeoutPromise = new Promise(resolve => setTimeout(() => resolve([]), 3500));
+        clientTokens = await Promise.race([ocrPromise, timeoutPromise]);
       } catch (e) {
         console.warn("Client OCR skipped, relying on server engine:", e);
       }

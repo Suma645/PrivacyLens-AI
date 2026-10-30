@@ -51,7 +51,7 @@ def health():
     """Health check endpoint for Render/Vercel and monitoring."""
     return jsonify({
         "status": "healthy",
-        "service": "SnapShield - Smart Screenshot Privacy Protector",
+        "service": "Privacy Lens AI - Smart Screenshot Privacy Protector",
         "version": "1.0.0",
         "opencv_version": cv2.__version__,
         "ocr_available": ocr_service.is_engine_ready(),
@@ -130,7 +130,7 @@ def analyze_screenshot():
         # 5. Modular AI Contextual Enhancement
         all_raw_text = " ".join([b.get("text", "") for b in ocr_blocks])
         combined_detections = face_detections + qr_detections + text_detections
-        enhanced_detections = ai_service.enhance_detections(all_raw_text, combined_detections)
+        enhanced_detections = ai_service.enhance_detections(all_raw_text, combined_detections, ocr_blocks=ocr_blocks)
 
         # Deduplicate overlapping detections
         final_detections = []
@@ -301,7 +301,7 @@ def download_protected(file_id):
         image_bytes = image_processor.cv2_to_bytes(protected_cv, format=fmt)
         
         timestamp = int(time.time())
-        download_filename = f"snapshield-protected-{timestamp}.{fmt}"
+        download_filename = f"privacylens-protected-{timestamp}.{fmt}"
         
         response = make_response(image_bytes)
         response.headers.set('Content-Type', f'image/{fmt}')
@@ -344,5 +344,5 @@ def get_sample_screenshots():
 
 if __name__ == "__main__":
     port = Config.PORT
-    print(f"[*] SnapShield Backend starting on http://127.0.0.1:{port}")
+    print(f"[*] Privacy Lens AI Backend starting on http://127.0.0.1:{port}")
     app.run(host="0.0.0.0", port=port, debug=Config.DEBUG)

@@ -15,11 +15,11 @@ export default function Footer({ onNavigate, onOpenAbout }) {
                 <Shield className="w-4 h-4" />
               </div>
               <span className="text-base font-bold text-white tracking-tight">
-                Snap<span className="text-cyan-400">Shield</span>
+                Privacy<span className="text-cyan-400">Lens AI</span>
               </span>
             </div>
             <p className="text-xs text-slate-400 max-w-sm leading-relaxed">
-              SnapShield – Smart Screenshot Privacy Protector.
+              Privacy Lens AI – Smart Screenshot Privacy Protector.
               Engineered with zero-storage architecture to prevent accidental data leaks in screenshots and screen captures.
             </p>
             <div className="flex items-center gap-2 text-[11px] text-slate-500 pt-1">
@@ -77,7 +77,7 @@ export default function Footer({ onNavigate, onOpenAbout }) {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
           <div>
-            © {new Date().getFullYear()} SnapShield Privacy. Designed for commercial screenshot security.
+            © {new Date().getFullYear()} Privacy Lens AI. Designed for commercial screenshot security.
           </div>
           <div className="flex items-center gap-1.5">
             <span>Built for Tech-ಶೋಧ Hackathon by</span>

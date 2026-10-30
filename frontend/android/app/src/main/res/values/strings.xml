@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">SnapShield</string>
-    <string name="title_activity_main">SnapShield</string>
-    <string name="package_name">com.snapshield.app</string>
-    <string name="custom_url_scheme">com.snapshield.app</string>
+    <string name="app_name">Privacy Lens AI</string>
+    <string name="title_activity_main">Privacy Lens AI</string>
+    <string name="package_name">com.privacylens.app</string>
+    <string name="custom_url_scheme">com.privacylens.app</string>
 </resources>

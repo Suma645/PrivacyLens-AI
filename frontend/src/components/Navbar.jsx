@@ -21,7 +21,7 @@ export default function Navbar({ onNavigate, activeTab, isBackendHealthy, onOpen
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xl font-bold tracking-tight text-white group-hover:text-cyan-400 transition-colors">
-                  Snap<span className="text-cyan-400">Shield</span>
+                  Privacy<span className="text-cyan-400">Lens AI</span>
                 </span>
                 <span className="text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-blue-500/10 text-cyan-300 border border-cyan-500/30">
                   v1.0
@@ -77,8 +77,8 @@ export default function Navbar({ onNavigate, activeTab, isBackendHealthy, onOpen
             </div>
 
             <a
-              href="/download/SnapShield-v1.0-debug.apk"
-              download="SnapShield-v1.0-debug.apk"
+              href="/download/PrivacyLensAI-v1.0-debug.apk"
+              download="PrivacyLensAI-v1.0-debug.apk"
               className="text-xs font-semibold text-cyan-300 hover:text-white px-3 py-1.5 rounded-lg border border-cyan-500/30 hover:border-cyan-400 bg-cyan-950/40 transition-colors flex items-center gap-1.5"
             >
               <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
@@ -137,8 +137,8 @@ export default function Navbar({ onNavigate, activeTab, isBackendHealthy, onOpen
             Protect Screenshot
           </button>
           <a
-            href="/download/SnapShield-v1.0-debug.apk"
-            download="SnapShield-v1.0-debug.apk"
+            href="/download/PrivacyLensAI-v1.0-debug.apk"
+            download="PrivacyLensAI-v1.0-debug.apk"
             onClick={() => setMobileMenuOpen(false)}
             className="flex items-center gap-2 w-full text-left px-3 py-2 text-base font-medium text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 rounded-lg"
           >

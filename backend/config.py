@@ -4,7 +4,7 @@ class Config:
     # App Settings
     PORT = int(os.environ.get("PORT", 5000))
     DEBUG = os.environ.get("FLASK_ENV") == "development"
-    SECRET_KEY = os.environ.get("SECRET_KEY", "snapshield-cybersecurity-secret-key-2026")
+    SECRET_KEY = os.environ.get("SECRET_KEY", "privacylens-ai-cybersecurity-secret-key-2026")
     
     # Upload Settings
     MAX_CONTENT_LENGTH = 30 * 1024 * 1024  # 30 MB max
