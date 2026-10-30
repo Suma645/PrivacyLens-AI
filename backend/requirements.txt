@@ -1,0 +1,9 @@
+Flask>=3.0.0
+flask-cors>=4.0.0
+Pillow>=10.0.0
+opencv-python-headless>=4.8.0.76; sys_platform != 'win32'
+opencv-python>=4.8.0.76; sys_platform == 'win32'
+pytesseract>=0.3.10
+gunicorn>=21.0.0
+numpy>=1.24.0
+Werkzeug>=3.0.0

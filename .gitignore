@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build artifacts
+dist/
+build/
+*.pyc
+__pycache__/
+
+# Android build & Gradle
+.gradle/
+android/.gradle/
+android/app/build/
+android/build/
+local.properties
+
+# Temp uploads & volatile session storage
+backend/temp_uploads/*
+!backend/temp_uploads/.gitkeep
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

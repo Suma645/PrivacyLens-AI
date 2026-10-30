@@ -1,0 +1,82 @@
+[
+  {
+    "text": "SecureSupport Chat - Case #CS-9921",
+    "box": {
+      "x": 30,
+      "y": 18,
+      "width": 300,
+      "height": 22
+    },
+    "conf": 0.95
+  },
+  {
+    "text": "Support Agent: Suma M",
+    "box": {
+      "x": 45,
+      "y": 90,
+      "width": 180,
+      "height": 20
+    },
+    "conf": 0.96
+  },
+  {
+    "text": "Customer: Nudi C",
+    "box": {
+      "x": 255,
+      "y": 170,
+      "width": 160,
+      "height": 20
+    },
+    "conf": 0.96
+  },
+  {
+    "text": "Sure, my phone is +1 (555) 839-2041 and email is nudi@example.com",
+    "box": {
+      "x": 255,
+      "y": 192,
+      "width": 470,
+      "height": 22
+    },
+    "conf": 0.98
+  },
+  {
+    "text": "The OTP code sent to my device is 849201",
+    "box": {
+      "x": 255,
+      "y": 214,
+      "width": 340,
+      "height": 22
+    },
+    "conf": 0.99
+  },
+  {
+    "text": "1042 Maple Avenue, Suite 4B, Seattle, WA 98101",
+    "box": {
+      "x": 255,
+      "y": 295,
+      "width": 380,
+      "height": 22
+    },
+    "conf": 0.97
+  },
+  {
+    "text": "SSN for ID verification: 987-65-4321",
+    "box": {
+      "x": 255,
+      "y": 318,
+      "width": 300,
+      "height": 22
+    },
+    "conf": 0.99
+  },
+  {
+    "text": "Employee ID: EMP-99410 | IP: 192.168.1.42",
+    "box": {
+      "x": 45,
+      "y": 432,
+      "width": 320,
+      "height": 20
+    },
+    "conf": 0.96
+  }
+]

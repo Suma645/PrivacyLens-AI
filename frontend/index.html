@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <title>SnapShield – Smart Screenshot Privacy Protector</title>
+    
+    <!-- PWA & Android Meta Tags -->
+    <meta name="theme-color" content="#070b14" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="SnapShield" />
+    <meta name="description" content="Enterprise-grade screenshot privacy protector. Automatically detects confidential data and selectively redacts everything except what you choose to share." />
+
+    <!-- iOS Web App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="SnapShield" />
+    
+    <!-- Icons and Manifest -->
+    <link rel="icon" type="image/png" sizes="64x64" href="/icons/favicon-64.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+  </head>
+  <body class="bg-[#070b14] text-slate-100 select-none antialiased">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Register Progressive Web App Service Worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((reg) => {
+              console.log('[SnapShield PWA] Service Worker active:', reg.scope);
+            })
+            .catch((err) => {
+              console.warn('[SnapShield PWA] Service Worker registration skipped:', err);
+            });
+        });
+      }
+    </script>
+  </body>
+</html>

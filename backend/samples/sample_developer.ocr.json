@@ -1,0 +1,92 @@
+[
+  {
+    "text": "# ENVIRONMENT CONFIGURATION - STRICTLY CONFIDENTIAL",
+    "box": {
+      "x": 30,
+      "y": 60,
+      "width": 450,
+      "height": 20
+    },
+    "conf": 0.99
+  },
+  {
+    "text": "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE",
+    "box": {
+      "x": 30,
+      "y": 98,
+      "width": 380,
+      "height": 22
+    },
+    "conf": 0.99
+  },
+  {
+    "text": "AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+    "box": {
+      "x": 30,
+      "y": 136,
+      "width": 520,
+      "height": 22
+    },
+    "conf": 0.98
+  },
+  {
+    "text": "GITHUB_TOKEN=ghp_kL90qRSTuvWxYz1234567890abcdefABCDEF",
+    "box": {
+      "x": 30,
+      "y": 174,
+      "width": 480,
+      "height": 22
+    },
+    "conf": 0.99
+  },
+  {
+    "text": "DATABASE_URL=postgres://admin:SuperSecretPass99@10.0.4.15:5432/prod_db",
+    "box": {
+      "x": 30,
+      "y": 212,
+      "width": 560,
+      "height": 22
+    },
+    "conf": 0.98
+  },
+  {
+    "text": "REDIS_URL=redis://192.168.1.100:6379",
+    "box": {
+      "x": 30,
+      "y": 250,
+      "width": 320,
+      "height": 22
+    },
+    "conf": 0.96
+  },
+  {
+    "text": "DEV_CONTACT_EMAIL=devops-lead@snapshield.internal.net",
+    "box": {
+      "x": 30,
+      "y": 288,
+      "width": 440,
+      "height": 22
+    },
+    "conf": 0.97
+  },
+  {
+    "text": "SSH_HOST=172.16.254.1:22",
+    "box": {
+      "x": 30,
+      "y": 326,
+      "width": 240,
+      "height": 22
+    },
+    "conf": 0.95
+  },
+  {
+    "text": "-----BEGIN RSA PRIVATE KEY-----",
+    "box": {
+      "x": 30,
+      "y": 364,
+      "width": 300,
+      "height": 22
+    },
+    "conf": 0.99
+  }
+]

@@ -1,0 +1,122 @@
+[
+  {
+    "text": "APEX PREMIER BANK - ACCOUNT OVERVIEW",
+    "box": {
+      "x": 30,
+      "y": 20,
+      "width": 380,
+      "height": 25
+    },
+    "conf": 0.98
+  },
+  {
+    "text": "CONFIDENTIAL",
+    "box": {
+      "x": 620,
+      "y": 20,
+      "width": 140,
+      "height": 25
+    },
+    "conf": 0.99
+  },
+  {
+    "text": "Apex Platinum Credit Card",
+    "box": {
+      "x": 60,
+      "y": 110,
+      "width": 220,
+      "height": 20
+    },
+    "conf": 0.95
+  },
+  {
+    "text": "Card Number: 4532 8920 1234 5678",
+    "box": {
+      "x": 60,
+      "y": 160,
+      "width": 300,
+      "height": 25
+    },
+    "conf": 0.99
+  },
+  {
+    "text": "Cardholder: Lakshmi E",
+    "box": {
+      "x": 60,
+      "y": 200,
+      "width": 180,
+      "height": 20
+    },
+    "conf": 0.96
+  },
+  {
+    "text": "Expires: 08/29   CVV: 742",
+    "box": {
+      "x": 60,
+      "y": 240,
+      "width": 200,
+      "height": 20
+    },
+    "conf": 0.97
+  },
+  {
+    "text": "Checking Account",
+    "box": {
+      "x": 500,
+      "y": 110,
+      "width": 150,
+      "height": 20
+    },
+    "conf": 0.95
+  },
+  {
+    "text": "Account No: 987654321098",
+    "box": {
+      "x": 500,
+      "y": 140,
+      "width": 210,
+      "height": 20
+    },
+    "conf": 0.98
+  },
+  {
+    "text": "IFSC: APEX0001429",
+    "box": {
+      "x": 500,
+      "y": 180,
+      "width": 160,
+      "height": 20
+    },
+    "conf": 0.95
+  },
+  {
+    "text": "UPI ID: lakshmi@okhdfcbank",
+    "box": {
+      "x": 500,
+      "y": 220,
+      "width": 210,
+      "height": 20
+    },
+    "conf": 0.98
+  },
+  {
+    "text": "Available: $24,850.50",
+    "box": {
+      "x": 500,
+      "y": 260,
+      "width": 180,
+      "height": 20
+    },
+    "conf": 0.95
+  },
+  {
+    "text": "Billing Address: 742 Evergreen Terrace, Springfield, OR",
+    "box": {
+      "x": 60,
+      "y": 445,
+      "width": 420,
+      "height": 22
+    },
+    "conf": 0.94
+  }
+]

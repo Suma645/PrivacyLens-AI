@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: snapshield-api
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "gunicorn --chdir backend app:app --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.8
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
