@@ -37,6 +37,16 @@ if (typeof window !== 'undefined') {
 }
 
 export async function runClientOcr(imageFileOrBlob, onProgress = null) {
+  if (!imageFileOrBlob) return [];
+
+  // Guard: Only process image formats in Tesseract. Documents (PDF, DOCX, XLSX, TXT) skip OCR
+  const filename = imageFileOrBlob.name || '';
+  const fileType = imageFileOrBlob.type || '';
+  const isImage = fileType.startsWith('image/') || /\.(png|jpe?g|webp|bmp|gif|tiff?)$/i.test(filename);
+  if (filename && !isImage) {
+    return [];
+  }
+
   try {
     const worker = await getWorker(onProgress);
     if (!worker) return [];

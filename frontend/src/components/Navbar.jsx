@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Lock, Eye, Menu, X, CheckCircle, Info, Smartphone } from 'lucide-react';
+import { Shield, Lock, Eye, Menu, X, CheckCircle, Info, Smartphone, Upload } from 'lucide-react';
 
 export default function Navbar({ onNavigate, activeTab, isBackendHealthy, onOpenAbout }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -24,10 +24,10 @@ export default function Navbar({ onNavigate, activeTab, isBackendHealthy, onOpen
                   Privacy<span className="text-cyan-400">Lens AI</span>
                 </span>
                 <span className="text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-blue-500/10 text-cyan-300 border border-cyan-500/30">
-                  v1.0
+                  v2.0
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400 hidden sm:block">Smart Screenshot Privacy Protector</p>
+              <p className="text-[10px] text-slate-400 hidden sm:block">Universal Document & Screenshot Privacy Protector</p>
             </div>
           </div>
 
@@ -42,12 +42,12 @@ export default function Navbar({ onNavigate, activeTab, isBackendHealthy, onOpen
               Home
             </button>
             <button
-              onClick={() => onNavigate('how-it-works')}
+              onClick={() => onNavigate('upload')}
               className={`text-sm font-medium transition-colors ${
-                activeTab === 'how-it-works' ? 'text-cyan-400 font-semibold' : 'text-slate-300 hover:text-white'
+                activeTab === 'upload' ? 'text-cyan-400 font-semibold' : 'text-slate-300 hover:text-white'
               }`}
             >
-              How It Works
+              Upload Documents
             </button>
             <button
               onClick={() => onNavigate('editor')}
@@ -56,6 +56,14 @@ export default function Navbar({ onNavigate, activeTab, isBackendHealthy, onOpen
               }`}
             >
               Privacy Shield
+            </button>
+            <button
+              onClick={() => onNavigate('how-it-works')}
+              className={`text-sm font-medium transition-colors ${
+                activeTab === 'how-it-works' ? 'text-cyan-400 font-semibold' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              How It Works
             </button>
             <button
               onClick={() => onNavigate('stego')}
@@ -81,7 +89,7 @@ export default function Navbar({ onNavigate, activeTab, isBackendHealthy, onOpen
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-400">
               <span className={`w-2 h-2 rounded-full ${isBackendHealthy ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
               <span className="text-[11px] font-mono">
-                {isBackendHealthy ? 'AI & Engine Online' : 'Local Sandbox'}
+                {isBackendHealthy ? 'AI & Engine Online' : 'Universal Sandbox'}
               </span>
             </div>
 
@@ -96,10 +104,10 @@ export default function Navbar({ onNavigate, activeTab, isBackendHealthy, onOpen
 
             <button
               onClick={() => onNavigate('upload')}
-              className="relative inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white transition-all duration-200 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 rounded-lg shadow-md shadow-blue-500/20 hover:shadow-cyan-500/30 hover:scale-102 focus:outline-none focus:ring-2 focus:ring-cyan-400 active:scale-98"
+              className="relative inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white transition-all duration-200 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 rounded-lg shadow-md shadow-blue-500/20 hover:shadow-cyan-500/30 hover:scale-102 focus:outline-none focus:ring-2 focus:ring-cyan-400 active:scale-98 cursor-pointer"
             >
-              <Lock className="w-4 h-4 mr-2" />
-              Protect Screenshot
+              <Upload className="w-4 h-4 mr-2" />
+              Upload & Scan
             </button>
           </div>
 
@@ -109,8 +117,8 @@ export default function Navbar({ onNavigate, activeTab, isBackendHealthy, onOpen
               onClick={() => onNavigate('upload')}
               className="px-3 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-cyan-500 rounded-lg flex items-center gap-1 shadow-sm"
             >
-              <Lock className="w-3.5 h-3.5" />
-              Protect
+              <Upload className="w-3.5 h-3.5" />
+              Upload
             </button>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -134,10 +142,10 @@ export default function Navbar({ onNavigate, activeTab, isBackendHealthy, onOpen
             Home
           </button>
           <button
-            onClick={() => { onNavigate('how-it-works'); setMobileMenuOpen(false); }}
-            className="block w-full text-left px-3 py-2 text-base font-medium text-slate-200 hover:bg-slate-900 rounded-lg"
+            onClick={() => { onNavigate('upload'); setMobileMenuOpen(false); }}
+            className="block w-full text-left px-3 py-2 text-base font-medium text-cyan-400 bg-blue-500/10 rounded-lg"
           >
-            How It Works
+            Upload Documents & Images
           </button>
           <button
             onClick={() => { onNavigate('editor'); setMobileMenuOpen(false); }}
@@ -146,16 +154,16 @@ export default function Navbar({ onNavigate, activeTab, isBackendHealthy, onOpen
             Privacy Shield
           </button>
           <button
+            onClick={() => { onNavigate('how-it-works'); setMobileMenuOpen(false); }}
+            className="block w-full text-left px-3 py-2 text-base font-medium text-slate-200 hover:bg-slate-900 rounded-lg"
+          >
+            How It Works
+          </button>
+          <button
             onClick={() => { onNavigate('stego'); setMobileMenuOpen(false); }}
             className="block w-full text-left px-3 py-2 text-base font-medium text-cyan-300 hover:bg-slate-900 rounded-lg"
           >
             Stego Lab
-          </button>
-          <button
-            onClick={() => { onNavigate('upload'); setMobileMenuOpen(false); }}
-            className="block w-full text-left px-3 py-2 text-base font-medium text-cyan-400 bg-blue-500/10 rounded-lg"
-          >
-            Protect Screenshot & Docs
           </button>
           <a
             href="/download/PrivacyLensAI-v1.0-debug.apk"

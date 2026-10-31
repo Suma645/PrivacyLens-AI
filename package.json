@@ -2,10 +2,10 @@
   "name": "privacylens-ai",
   "version": "2.0.0",
   "private": true,
-  "description": "Privacy Lens AI - Smart Screenshot & Document Privacy Protector",
+  "description": "PrivacyLens-AI - Universal Document Privacy Scanner & Automatic Redaction System",
   "scripts": {
     "build": "cd frontend && npm install && npm run build",
-    "start": "npx serve -s frontend/dist -l ${PORT:-10000}",
+    "start": "node server.js",
     "dev": "cd frontend && npm run dev"
   },
   "engines": {

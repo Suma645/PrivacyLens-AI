@@ -46,27 +46,33 @@ export default function App() {
     setTimeout(() => setGlobalNotification(null), 4500);
   };
 
-  // Analyze Screenshot handler
+  // Universal Document & Screenshot Analysis Handler
   const handleAnalyze = async (file, preloadedTokens = null) => {
     setAnalyzing(true);
     setUploadProgress(20);
 
     try {
       let clientTokens = preloadedTokens || [];
-      if (!clientTokens || clientTokens.length === 0) {
-        setUploadProgress(40);
+      const isImage = file && (file.type?.startsWith('image/') || /\.(png|jpe?g|webp|bmp|gif|tiff?)$/i.test(file.name || ''));
+
+      // Only perform image OCR if uploaded file is actually an image screenshot
+      if (isImage && (!clientTokens || clientTokens.length === 0)) {
+        setUploadProgress(35);
         try {
           clientTokens = await runClientOcr(file, (p) => {
-            setUploadProgress(40 + Math.round(p * 45));
+            setUploadProgress(35 + Math.round(p * 45));
           });
         } catch (e) {
           console.warn("Client OCR warning:", e);
         }
+      } else {
+        // Document (PDF, DOCX, XLSX, PPTX, TXT) skips image OCR directly
+        setUploadProgress(45);
       }
 
       setUploadProgress(85);
 
-      // Call analyze API (falls back to on-device engine with clientTokens if backend unreachable)
+      // Call universal analyze API (falls back to on-device engine with clientTokens if backend unreachable)
       const result = await analyzeScreenshot(file, clientTokens);
       setUploadProgress(100);
 
@@ -75,12 +81,13 @@ export default function App() {
       setAnalyzing(false);
       setActiveTab('editor');
 
-      showNotification(`Analysis complete! Identified ${result.detections.length} privacy factors.`, 'success');
+      const fileLabel = isImage ? 'screenshot' : 'document';
+      showNotification(`Analysis complete! Identified ${result.detections.length} privacy factors in ${fileLabel}.`, 'success');
 
     } catch (err) {
       console.error("Analysis failure:", err);
       setAnalyzing(false);
-      showNotification(err.message || "Failed to analyze screenshot.", 'error');
+      showNotification(err.message || "Failed to analyze document or screenshot.", 'error');
     }
   };
 

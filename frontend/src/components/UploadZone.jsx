@@ -15,7 +15,8 @@ import {
   Info, 
   Loader2, 
   FileCheck2, 
-  Layers 
+  Layers,
+  FolderOpen
 } from 'lucide-react';
 
 export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSelectSample }) {
@@ -31,13 +32,23 @@ export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSel
   const supportedDocExtensions = [
     'pdf', 'docx', 'doc', 'xlsx', 'xls', 'pptx', 'ppt', 'txt', 'rtf', 'odt', 'ods', 'odp'
   ];
-  const supportedImageExtensions = ['png', 'jpg', 'jpeg', 'webp', 'bmp'];
+  const supportedImageExtensions = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'tiff'];
   const allSupported = [...supportedDocExtensions, ...supportedImageExtensions];
 
   const maxSizeBytes = 50 * 1024 * 1024; // 50 MB
 
+  // Dynamic Accept strings per tab for OS file dialog
+  const acceptMap = {
+    ALL: '*/*',
+    PDF: '.pdf,application/pdf',
+    WORD: '.docx,.doc,.odt,.rtf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    EXCEL: '.xlsx,.xls,.ods,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    PPT: '.pptx,.ppt,.odp,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    IMAGE: 'image/*,.png,.jpg,.jpeg,.webp,.bmp'
+  };
+
   const getFormatCategory = (filename) => {
-    const ext = filename.split('.').pop().toLowerCase();
+    const ext = filename.includes('.') ? filename.split('.').pop().toLowerCase() : '';
     if (['pdf'].includes(ext)) return { label: 'PDF Document', icon: FileText, color: 'text-red-400 bg-red-500/10 border-red-500/30' };
     if (['docx', 'doc', 'odt', 'rtf'].includes(ext)) return { label: 'Word Document', icon: FileText, color: 'text-blue-400 bg-blue-500/10 border-blue-500/30' };
     if (['xlsx', 'xls', 'ods', 'csv'].includes(ext)) return { label: 'Spreadsheet', icon: FileSpreadsheet, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' };
@@ -50,11 +61,11 @@ export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSel
     setError(null);
     if (!file) return;
 
-    const ext = file.name.split('.').pop().toLowerCase();
+    const ext = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : '';
     const isSupported = allSupported.includes(ext);
 
     if (!isSupported) {
-      setError(`Unsupported format ".${ext}". Please upload PDF, Word (DOCX/DOC), Excel (XLSX/XLS), PowerPoint (PPTX/PPT), Text (TXT/RTF), or Images (PNG/JPG/WEBP).`);
+      setError(`Unsupported format ".${ext || 'unknown'}". Supported formats: PDF, Word (.docx/.doc), Excel (.xlsx/.xls), PowerPoint (.pptx/.ppt), Text (.txt/.rtf), and Images (.png/.jpg/.webp).`);
       return;
     }
 
@@ -140,7 +151,7 @@ export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSel
     onAnalyze(selectedFile);
   };
 
-  const acceptString = ".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.txt,.rtf,.odt,.ods,.odp,.png,.jpg,.jpeg,.webp,.bmp";
+  const currentAccept = acceptMap[activeFormatTab] || '*/*';
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
@@ -159,7 +170,7 @@ export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSel
         </p>
       </div>
 
-      {/* Format Category Pills */}
+      {/* Format Category Filter Pills */}
       <div className="flex flex-wrap items-center justify-center gap-2 mb-6 text-xs">
         {[
           { id: 'ALL', label: 'All Supported Formats' },
@@ -203,18 +214,28 @@ export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSel
         onDragOver={handleDrag}
         onDragLeave={handleDrag}
         onDrop={handleDrop}
-        className={`relative border-2 border-dashed rounded-3xl p-8 sm:p-12 text-center transition-all duration-200 ${
+        onClick={(e) => {
+          if (!selectedFile && !e.target.closest('button')) {
+            fileInputRef.current?.click();
+          }
+        }}
+        className={`relative border-2 border-dashed rounded-3xl p-8 sm:p-12 text-center transition-all duration-200 cursor-pointer ${
           dragActive 
             ? 'border-cyan-400 bg-cyan-950/30 shadow-2xl shadow-cyan-500/20 scale-[1.01]' 
             : 'border-slate-800 hover:border-slate-700 bg-slate-900/50 shadow-xl'
         }`}
       >
+        {/* Universal File Input (accepts all files so file browser never hides documents) */}
         <input
           ref={fileInputRef}
           type="file"
-          accept={acceptString}
+          accept={currentAccept}
           className="hidden"
-          onChange={(e) => handleFileProcess(e.target.files[0])}
+          onChange={(e) => {
+            if (e.target.files && e.target.files[0]) {
+              handleFileProcess(e.target.files[0]);
+            }
+          }}
         />
 
         {!selectedFile ? (
@@ -232,16 +253,19 @@ export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSel
 
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={(e) => {
+                e.stopPropagation();
+                fileInputRef.current?.click();
+              }}
               className="inline-flex items-center px-6 py-3.5 rounded-2xl font-bold text-sm text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 transition-all shadow-lg shadow-blue-500/25 cursor-pointer hover:scale-[1.02]"
             >
-              <Upload className="w-4 h-4 mr-2" />
-              Choose Document or Image
+              <FolderOpen className="w-4 h-4 mr-2" />
+              Browse Documents & Images
             </button>
 
             {/* Quick Demo Samples */}
             {onSelectSample && (
-              <div className="mt-8 pt-6 border-t border-slate-800/80">
+              <div className="mt-8 pt-6 border-t border-slate-800/80" onClick={(e) => e.stopPropagation()}>
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 block mb-3">
                   Or test with 1-click sample cases:
                 </span>
@@ -280,7 +304,7 @@ export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSel
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6" onClick={(e) => e.stopPropagation()}>
             
             {/* File Preview Card */}
             <div className="relative max-w-md mx-auto rounded-3xl overflow-hidden border border-slate-700/80 bg-slate-950 shadow-2xl">

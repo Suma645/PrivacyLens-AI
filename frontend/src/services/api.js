@@ -43,6 +43,34 @@ function readFileAsText(file) {
   });
 }
 
+// Extract printable strings from binary documents (PDF, DOCX, XLSX, PPTX) on-device
+async function extractRawStringsFromDoc(file) {
+  try {
+    const buffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    const lines = [];
+    let current = "";
+    for (let i = 0; i < bytes.length; i++) {
+      const b = bytes[i];
+      if (b >= 32 && b <= 126) {
+        current += String.fromCharCode(b);
+      } else {
+        if (current.length >= 3 && /[a-zA-Z0-9]/.test(current)) {
+          lines.push(current);
+        }
+        current = "";
+      }
+    }
+    if (current.length >= 3 && /[a-zA-Z0-9]/.test(current)) {
+      lines.push(current);
+    }
+    return lines;
+  } catch (e) {
+    console.warn("Client raw string extraction error:", e);
+    return [];
+  }
+}
+
 export async function analyzeScreenshot(file, clientOcrTokens = []) {
   currentUploadedFile = file;
   const isImage = /\.(png|jpe?g|webp|bmp)$/i.test(file.name);
@@ -69,16 +97,19 @@ export async function analyzeScreenshot(file, clientOcrTokens = []) {
     const res = await fetch(`${API_BASE_URL}/api/analyze`, {
       method: 'POST',
       body: formData,
-      signal: AbortSignal.timeout(12000)
+      signal: AbortSignal.timeout(60000)
     });
 
     if (res.ok) {
-      const data = await res.json();
-      if (data && data.detections) {
-        if (data.protected_image) {
-          currentImageDataUrl = data.original_image;
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await res.json();
+        if (data && data.detections) {
+          if (data.protected_image) {
+            currentImageDataUrl = data.original_image;
+          }
+          return data;
         }
-        return data;
       }
     }
   } catch (err) {
@@ -100,6 +131,18 @@ export async function analyzeScreenshot(file, clientOcrTokens = []) {
       }));
     } catch (e) {
       console.warn("Error reading text document locally:", e);
+    }
+  } else if (!isImage) {
+    // Binary Documents (PDF, DOCX, XLSX, PPTX)
+    try {
+      const rawLines = await extractRawStringsFromDoc(file);
+      activeTokens = rawLines.map((line, idx) => ({
+        text: line.trim(),
+        box: { x: 30, y: 30 + (idx % 25) * 25, width: Math.min(600, line.length * 9), height: 20 },
+        is_line: true
+      }));
+    } catch (e) {
+      console.warn("Error reading document locally:", e);
     }
   } else if (isImage && activeTokens.length === 0) {
     try {
