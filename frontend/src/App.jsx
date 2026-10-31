@@ -5,7 +5,6 @@ import HowItWorks from './components/HowItWorks';
 import UploadZone from './components/UploadZone';
 import RiskDashboard from './components/RiskDashboard';
 import PrivacyEditor from './components/PrivacyEditor';
-import StegoLab from './components/StegoLab';
 import DownloadModal from './components/DownloadModal';
 import AboutModal from './components/AboutModal';
 import InstallPwaPrompt from './components/InstallPwaPrompt';
@@ -50,25 +49,22 @@ export default function App() {
   // Analyze Screenshot handler
   const handleAnalyze = async (file, preloadedTokens = null) => {
     setAnalyzing(true);
-    setUploadProgress(15);
+    setUploadProgress(20);
 
     try {
       let clientTokens = preloadedTokens || [];
       if (!clientTokens || clientTokens.length === 0) {
-        setUploadProgress(25);
+        setUploadProgress(40);
         try {
-          // Allow OCR up to 12s with progress
-          const ocrPromise = runClientOcr(file, (p) => {
-            setUploadProgress(25 + Math.round(p * 45));
+          clientTokens = await runClientOcr(file, (p) => {
+            setUploadProgress(40 + Math.round(p * 45));
           });
-          const timeoutPromise = new Promise(resolve => setTimeout(() => resolve([]), 12000));
-          clientTokens = await Promise.race([ocrPromise, timeoutPromise]);
         } catch (e) {
-          console.warn("Client OCR error:", e);
+          console.warn("Client OCR warning:", e);
         }
       }
 
-      setUploadProgress(75);
+      setUploadProgress(85);
 
       // Call analyze API (falls back to on-device engine with clientTokens if backend unreachable)
       const result = await analyzeScreenshot(file, clientTokens);
@@ -84,7 +80,7 @@ export default function App() {
     } catch (err) {
       console.error("Analysis failure:", err);
       setAnalyzing(false);
-      showNotification(err.message || "Failed to analyze screenshot. Please verify backend is running.", 'error');
+      showNotification(err.message || "Failed to analyze screenshot.", 'error');
     }
   };
 
@@ -300,11 +296,6 @@ export default function App() {
           />
         )}
 
-        {/* Steganography Lab */}
-        {activeTab === 'stego' && (
-          <StegoLab />
-        )}
-
         {/* Editor & Risk Dashboard */}
         {activeTab === 'editor' && (
           <div>
@@ -335,8 +326,8 @@ export default function App() {
                   onChangeItemStyle={handleChangeItemStyle}
                   onProtectAll={handleProtectAll}
                   onInvertAll={handleInvertAll}
+                  onOpenDownload={() => setIsDownloadOpen(true)}
                   onProceedToEditor={() => {
-                    // Smooth scroll to the interactive canvas
                     const elem = document.getElementById('privacy-editor-container');
                     elem?.scrollIntoView({ behavior: 'smooth' });
                   }}

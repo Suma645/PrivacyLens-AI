@@ -1,6 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { 
   Upload, 
+  FileText, 
+  FileSpreadsheet, 
+  Presentation, 
+  FileCode, 
   FileImage, 
   AlertCircle, 
   CheckCircle, 
@@ -8,81 +12,97 @@ import {
   Shield, 
   ArrowRight, 
   X, 
-  Info,
-  Loader2
+  Info, 
+  Loader2, 
+  FileCheck2, 
+  Layers 
 } from 'lucide-react';
 
 export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSelectSample }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [imageMeta, setImageMeta] = useState(null);
+  const [fileMeta, setFileMeta] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState(null);
+  const [activeFormatTab, setActiveFormatTab] = useState('ALL');
   const fileInputRef = useRef(null);
 
-  const allowedTypes = [
-    'image/png', 
-    'image/jpeg', 
-    'image/jpg', 
-    'image/webp',
-    'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/msword'
+  // Supported extensions matching backend DocumentService
+  const supportedDocExtensions = [
+    'pdf', 'docx', 'doc', 'xlsx', 'xls', 'pptx', 'ppt', 'txt', 'rtf', 'odt', 'ods', 'odp'
   ];
-  const maxSizeBytes = 30 * 1024 * 1024; // 30 MB
+  const supportedImageExtensions = ['png', 'jpg', 'jpeg', 'webp', 'bmp'];
+  const allSupported = [...supportedDocExtensions, ...supportedImageExtensions];
+
+  const maxSizeBytes = 50 * 1024 * 1024; // 50 MB
+
+  const getFormatCategory = (filename) => {
+    const ext = filename.split('.').pop().toLowerCase();
+    if (['pdf'].includes(ext)) return { label: 'PDF Document', icon: FileText, color: 'text-red-400 bg-red-500/10 border-red-500/30' };
+    if (['docx', 'doc', 'odt', 'rtf'].includes(ext)) return { label: 'Word Document', icon: FileText, color: 'text-blue-400 bg-blue-500/10 border-blue-500/30' };
+    if (['xlsx', 'xls', 'ods', 'csv'].includes(ext)) return { label: 'Spreadsheet', icon: FileSpreadsheet, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' };
+    if (['pptx', 'ppt', 'odp'].includes(ext)) return { label: 'Presentation', icon: Presentation, color: 'text-orange-400 bg-orange-500/10 border-orange-500/30' };
+    if (['txt', 'log'].includes(ext)) return { label: 'Text Document', icon: FileCode, color: 'text-amber-400 bg-amber-500/10 border-amber-500/30' };
+    return { label: 'Screenshot / Image', icon: FileImage, color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30' };
+  };
 
   const handleFileProcess = (file) => {
     setError(null);
     if (!file) return;
 
-    const isSupported = allowedTypes.includes(file.type.toLowerCase()) || 
-      /\.(png|jpe?g|webp|pdf|docx?)$/i.test(file.name);
+    const ext = file.name.split('.').pop().toLowerCase();
+    const isSupported = allSupported.includes(ext);
 
     if (!isSupported) {
-      setError("Unsupported format. Please upload an image (PNG, JPG, WEBP) or document (PDF, DOCX).");
+      setError(`Unsupported format ".${ext}". Please upload PDF, Word (DOCX/DOC), Excel (XLSX/XLS), PowerPoint (PPTX/PPT), Text (TXT/RTF), or Images (PNG/JPG/WEBP).`);
       return;
     }
 
     if (file.size > maxSizeBytes) {
-      setError("File exceeds 30MB limit. Please upload a smaller file.");
+      setError("File exceeds 50MB limit. Please upload a smaller file.");
       return;
     }
 
     setSelectedFile(file);
 
-    const isDocument = /\.(pdf|docx?)$/i.test(file.name);
+    const isImage = supportedImageExtensions.includes(ext);
+    const catInfo = getFormatCategory(file.name);
 
-    // Read preview and dimensions
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const url = e.target.result;
-      setPreviewUrl(url);
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const url = e.target.result;
+        setPreviewUrl(url);
 
-      if (isDocument) {
-        setImageMeta({
-          name: file.name,
-          sizeFormatted: (file.size / (1024 * 1024)).toFixed(2) + " MB",
-          width: 800,
-          height: 1000,
-          type: file.name.endsWith('.pdf') ? 'application/pdf' : 'application/docx',
-          isDocument: true
-        });
-      } else {
         const img = new Image();
         img.onload = () => {
-          setImageMeta({
+          setFileMeta({
             name: file.name,
+            ext: ext.toUpperCase(),
             sizeFormatted: (file.size / (1024 * 1024)).toFixed(2) + " MB",
-            width: img.width,
-            height: img.height,
-            type: file.type || 'image/png',
-            isDocument: false
+            dimensions: `${img.width} × ${img.height} px`,
+            type: catInfo.label,
+            isDocument: false,
+            catInfo
           });
         };
         img.src = url;
-      }
-    };
-    reader.readAsDataURL(file);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // Document file (PDF, DOCX, XLSX, PPTX, TXT)
+      setPreviewUrl(null);
+      setFileMeta({
+        name: file.name,
+        ext: ext.toUpperCase(),
+        sizeFormatted: file.size > 1024 * 1024 
+          ? (file.size / (1024 * 1024)).toFixed(2) + " MB"
+          : (file.size / 1024).toFixed(1) + " KB",
+        type: catInfo.label,
+        isDocument: true,
+        catInfo
+      });
+    }
   };
 
   const handleDrag = (e) => {
@@ -107,34 +127,77 @@ export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSel
   const handleReset = () => {
     setSelectedFile(null);
     setPreviewUrl(null);
-    setImageMeta(null);
+    setFileMeta(null);
     setError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleStartAnalysis = () => {
     if (!selectedFile) {
-      setError("Please select or drop a screenshot first.");
+      setError("Please select or drop a document or screenshot first.");
       return;
     }
     onAnalyze(selectedFile);
   };
 
+  const acceptString = ".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.txt,.rtf,.odt,.ods,.odp,.png,.jpg,.jpeg,.webp,.bmp";
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-8">
       
-      {/* Step Header */}
-      <div className="text-center mb-8">
+      {/* Header */}
+      <div className="text-center mb-6">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-cyan-400 text-xs font-semibold mb-3">
-          Step 1 of 3: Secure Ingestion
+          <Shield className="w-3.5 h-3.5" />
+          Universal Privacy Scanner & Automatic Redaction
         </div>
-        <h2 className="text-3xl font-bold text-white tracking-tight">Upload Your Screenshot</h2>
-        <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">
-          Screenshots are analyzed strictly in volatile memory. No permanent copies are stored.
+        <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          Upload Documents or Screenshots
+        </h2>
+        <p className="text-sm text-slate-400 mt-2 max-w-xl mx-auto">
+          Scan PDFs, Word, Excel, PowerPoint, Text, and Screenshots for sensitive PII. Critical information (Aadhaar, PAN, Bank accounts) is automatically protected.
         </p>
       </div>
 
-      {/* Main Upload Box */}
+      {/* Format Category Pills */}
+      <div className="flex flex-wrap items-center justify-center gap-2 mb-6 text-xs">
+        {[
+          { id: 'ALL', label: 'All Supported Formats' },
+          { id: 'PDF', label: 'PDF Documents (.pdf)' },
+          { id: 'WORD', label: 'Word (.docx, .doc, .odt)' },
+          { id: 'EXCEL', label: 'Excel & Data (.xlsx, .xls, .ods)' },
+          { id: 'PPT', label: 'PowerPoint (.pptx, .ppt)' },
+          { id: 'IMAGE', label: 'Screenshots & Images' }
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveFormatTab(tab.id)}
+            className={`px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer ${
+              activeFormatTab === tab.id
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                : 'bg-slate-900/60 text-slate-400 hover:text-white border border-slate-800'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="mb-6 p-4 rounded-2xl bg-red-950/60 border border-red-500/40 text-red-200 text-xs flex items-center justify-between gap-3 shadow-lg">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            <span>{error}</span>
+          </div>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Main Drag-and-Drop Area */}
       <div
         onDragEnter={handleDrag}
         onDragOver={handleDrag}
@@ -142,45 +205,77 @@ export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSel
         onDrop={handleDrop}
         className={`relative border-2 border-dashed rounded-3xl p-8 sm:p-12 text-center transition-all duration-200 ${
           dragActive 
-            ? 'border-cyan-400 bg-cyan-950/20 shadow-2xl shadow-cyan-500/20 scale-[1.01]' 
-            : 'border-slate-800 hover:border-slate-700 bg-slate-900/50'
+            ? 'border-cyan-400 bg-cyan-950/30 shadow-2xl shadow-cyan-500/20 scale-[1.01]' 
+            : 'border-slate-800 hover:border-slate-700 bg-slate-900/50 shadow-xl'
         }`}
       >
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/png, image/jpeg, image/jpg, image/webp, application/pdf, .pdf, .docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          accept={acceptString}
           className="hidden"
           onChange={(e) => handleFileProcess(e.target.files[0])}
         />
 
         {!selectedFile ? (
           <div>
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-tr from-blue-600/20 via-indigo-600/20 to-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-inner">
-              <Upload className="w-8 h-8" />
+            <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-gradient-to-tr from-blue-600/20 via-indigo-600/20 to-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-inner">
+              <Upload className="w-10 h-10" />
             </div>
 
-            <h3 className="text-lg font-bold text-white mb-1">
-              Drag and drop your screenshot or document here
+            <h3 className="text-xl font-bold text-white mb-1">
+              Drag & drop your document or screenshot here
             </h3>
-            <p className="text-xs text-slate-400 mb-6">
-              Supports PNG, JPG, WEBP, PDF & DOCX up to 30 MB
+            <p className="text-xs text-slate-400 mb-6 max-w-md mx-auto">
+              PDF, Word (DOCX/DOC), Excel (XLSX/XLS), PowerPoint (PPTX/PPT), Text (TXT/RTF), PNG, JPG, WEBP (up to 50 MB)
             </p>
 
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center px-6 py-3 rounded-xl font-semibold text-sm text-white bg-blue-600 hover:bg-blue-500 transition-colors shadow-md shadow-blue-500/20 cursor-pointer"
+              className="inline-flex items-center px-6 py-3.5 rounded-2xl font-bold text-sm text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 transition-all shadow-lg shadow-blue-500/25 cursor-pointer hover:scale-[1.02]"
             >
-              <FileImage className="w-4 h-4 mr-2" />
-              Browse Images & Documents
+              <Upload className="w-4 h-4 mr-2" />
+              Choose Document or Image
             </button>
 
-            {/* Privacy Notification Banner */}
-            <div className="mt-8 flex items-center justify-center gap-2 text-xs text-slate-400 max-w-lg mx-auto bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+            {/* Quick Demo Samples */}
+            {onSelectSample && (
+              <div className="mt-8 pt-6 border-t border-slate-800/80">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 block mb-3">
+                  Or test with 1-click sample cases:
+                </span>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onSelectSample('sample_banking.png', 'Banking & Aadhaar Statement')}
+                    className="px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-colors cursor-pointer flex items-center gap-1.5"
+                  >
+                    🏦 Banking & Aadhaar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSelectSample('sample_chat.png', 'Customer Support Chat & Marks')}
+                    className="px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-colors cursor-pointer flex items-center gap-1.5"
+                  >
+                    💬 Chat & Student Marks
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSelectSample('sample_developer.png', 'Developer Terminal & Secrets')}
+                    className="px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-colors cursor-pointer flex items-center gap-1.5"
+                  >
+                    💻 Cloud Keys & Secrets
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Privacy Assurance Banner */}
+            <div className="mt-6 flex items-center justify-center gap-2 text-xs text-slate-400 max-w-lg mx-auto bg-slate-950/60 p-3 rounded-xl border border-slate-800">
               <Shield className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>
-                <strong>Privacy Assurance:</strong> Files are processed in memory and never sent to external AI without explicit consent.
+                <strong>Privacy Protected:</strong> Original files are never overwritten; sanitized copies are generated separately.
               </span>
             </div>
           </div>
@@ -188,28 +283,38 @@ export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSel
           <div className="space-y-6">
             
             {/* File Preview Card */}
-            <div className="relative max-w-md mx-auto rounded-2xl overflow-hidden border border-slate-700/80 bg-slate-950 shadow-2xl group">
-              {imageMeta?.isDocument ? (
-                <div className="p-8 text-center space-y-3 bg-slate-900/60">
-                  <div className="w-16 h-16 mx-auto rounded-2xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
-                    <FileImage className="w-8 h-8" />
-                  </div>
-                  <h4 className="text-sm font-bold text-white">{imageMeta.name}</h4>
-                  <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-cyan-300 border border-blue-500/30">
-                    {imageMeta.name.endsWith('.pdf') ? 'PDF Document' : 'Word Document (.DOCX)'}
-                  </span>
-                </div>
-              ) : (
+            <div className="relative max-w-md mx-auto rounded-3xl overflow-hidden border border-slate-700/80 bg-slate-950 shadow-2xl">
+              {previewUrl ? (
                 <img
                   src={previewUrl}
-                  alt="Uploaded Screenshot"
-                  className="w-full max-h-72 object-contain mx-auto"
+                  alt="Uploaded file preview"
+                  className="w-full max-h-72 object-contain mx-auto bg-slate-950/80"
                 />
+              ) : (
+                <div className="p-8 text-center space-y-3 bg-slate-900/70">
+                  <div className={`w-20 h-20 mx-auto rounded-3xl border flex items-center justify-center ${fileMeta?.catInfo?.color || 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30'}`}>
+                    {fileMeta?.catInfo?.icon ? (
+                      <fileMeta.catInfo.icon className="w-10 h-10" />
+                    ) : (
+                      <FileCheck2 className="w-10 h-10" />
+                    )}
+                  </div>
+                  <h4 className="text-base font-bold text-white break-all">{fileMeta?.name}</h4>
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-blue-500/20 text-cyan-300 border border-blue-500/30">
+                      {fileMeta?.type || 'Document'}
+                    </span>
+                    <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300">
+                      .{fileMeta?.ext}
+                    </span>
+                  </div>
+                </div>
               )}
+
               <button
                 type="button"
                 onClick={handleReset}
-                className="absolute top-2 right-2 p-1.5 rounded-full bg-slate-900/80 text-slate-300 hover:text-white hover:bg-red-600 transition-colors cursor-pointer"
+                className="absolute top-3 right-3 p-1.5 rounded-full bg-slate-900/90 text-slate-300 hover:text-white hover:bg-red-600 transition-colors cursor-pointer shadow-md"
                 title="Remove file"
               >
                 <X className="w-4 h-4" />
@@ -217,32 +322,35 @@ export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSel
             </div>
 
             {/* Metadata Bar */}
-            {imageMeta && (
-              <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-300 bg-slate-950/70 p-3 rounded-xl border border-slate-800 max-w-md mx-auto">
+            {fileMeta && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs bg-slate-950/80 p-4 rounded-2xl border border-slate-800 max-w-md mx-auto text-left">
                 <div>
-                  <span className="text-slate-500">File: </span>
-                  <span className="font-semibold text-white">{imageMeta.name}</span>
+                  <span className="text-slate-500 block text-[11px]">Format</span>
+                  <span className="font-bold text-white">{fileMeta.ext} ({fileMeta.type})</span>
                 </div>
                 <div>
-                  <span className="text-slate-500">Size: </span>
-                  <span className="font-semibold text-cyan-400">{imageMeta.sizeFormatted}</span>
+                  <span className="text-slate-500 block text-[11px]">Size</span>
+                  <span className="font-bold text-cyan-400">{fileMeta.sizeFormatted}</span>
                 </div>
-                <div>
-                  <span className="text-slate-500">Dimensions: </span>
-                  <span className="font-semibold text-blue-400">{imageMeta.width} × {imageMeta.height} px</span>
+                <div className="col-span-2 sm:col-span-1">
+                  <span className="text-slate-500 block text-[11px]">Processing Status</span>
+                  <span className="font-bold text-emerald-400 flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Ready to Scan
+                  </span>
                 </div>
               </div>
             )}
 
-            {/* Upload Progress Bar if processing */}
+            {/* Analysis Progress Indicator */}
             {analyzing && (
               <div className="max-w-md mx-auto space-y-2">
                 <div className="flex justify-between text-xs text-slate-400">
-                  <span className="flex items-center gap-1.5 text-cyan-300 font-medium">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Scanning screenshot with OCR & Pattern Heuristics...
+                  <span className="flex items-center gap-2 text-cyan-300 font-semibold">
+                    <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                    Scanning Document / Image for PII...
                   </span>
-                  <span>{uploadProgress || 65}%</span>
+                  <span className="font-mono font-bold text-cyan-400">{uploadProgress || 65}%</span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
                   <div 
@@ -254,76 +362,29 @@ export default function UploadZone({ onAnalyze, analyzing, uploadProgress, onSel
             )}
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <button
-                type="button"
-                disabled={analyzing}
-                onClick={handleStartAnalysis}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 shadow-lg shadow-blue-500/25 hover:shadow-cyan-500/35 transition-all duration-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {analyzing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Analyzing Privacy Risks...
-                  </>
-                ) : (
-                  <>
-                    <Shield className="w-5 h-5 text-cyan-200" />
-                    Analyze Screenshot
-                    <ArrowRight className="w-4 h-4 ml-1" />
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                disabled={analyzing}
-                onClick={handleReset}
-                className="px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 transition-colors"
-              >
-                Choose Different File
-              </button>
-            </div>
+            {!analyzing && (
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="px-5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
+                >
+                  Choose Different File
+                </button>
+                <button
+                  type="button"
+                  onClick={handleStartAnalysis}
+                  className="px-7 py-3 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 transition-all shadow-lg shadow-blue-500/30 flex items-center gap-2 cursor-pointer hover:scale-[1.02]"
+                >
+                  <Shield className="w-4 h-4" />
+                  Scan & Protect Document
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
 
           </div>
         )}
-
-      </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="mt-4 p-4 rounded-xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Preset Test Case Presets for Hackathon / Testing */}
-      <div className="mt-8 pt-6 border-t border-slate-800 text-center">
-        <p className="text-xs text-slate-400 font-semibold mb-3">Or choose a pre-loaded sample screenshot:</p>
-        <div className="flex flex-wrap items-center justify-center gap-2.5">
-          <button
-            onClick={() => onSelectSample('sample_banking.png', 'Apex Bank Statement')}
-            className="px-3.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-blue-500/60 text-xs text-slate-300 hover:text-cyan-300 transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <span>💳</span>
-            <span>Bank & Card Statement</span>
-          </button>
-          <button
-            onClick={() => onSelectSample('sample_developer.png', 'Developer Terminal & Keys')}
-            className="px-3.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-cyan-500/60 text-xs text-slate-300 hover:text-cyan-300 transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <span>🔑</span>
-            <span>Cloud Secrets & .env</span>
-          </button>
-          <button
-            onClick={() => onSelectSample('sample_chat.png', 'Support Chat & OTP')}
-            className="px-3.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-violet-500/60 text-xs text-slate-300 hover:text-cyan-300 transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <span>💬</span>
-            <span>Customer Chat & OTP</span>
-          </button>
-        </div>
       </div>
 
     </div>

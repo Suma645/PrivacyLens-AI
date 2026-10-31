@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { 
   ShieldCheck, 
@@ -13,11 +13,22 @@ import {
 import { getDownloadUrl } from '../services/api';
 
 export default function DownloadModal({ isOpen, onClose, fileId, imageInfo, residualRisk, protectedImage }) {
-  const [format, setFormat] = useState('png');
+  const origExt = (imageInfo?.filename?.split('.').pop() || 'png').toLowerCase();
+  const isDoc = ['pdf', 'docx', 'doc', 'xlsx', 'xls', 'pptx', 'ppt', 'txt', 'rtf'].includes(origExt);
+
+  const [format, setFormat] = useState(isDoc ? origExt : 'png');
   const [check1, setCheck1] = useState(true);
   const [check2, setCheck2] = useState(true);
   const [check3, setCheck3] = useState(true);
   const [downloading, setDownloading] = useState(false);
+
+  useEffect(() => {
+    if (isDoc) {
+      setFormat(origExt);
+    } else {
+      setFormat('png');
+    }
+  }, [origExt, isDoc]);
 
   if (!isOpen) return null;
 
@@ -28,18 +39,14 @@ export default function DownloadModal({ isOpen, onClose, fileId, imageInfo, resi
 
     setDownloading(true);
 
-    // Trigger fireworks / confetti
     try {
       confetti({
         particleCount: 80,
         spread: 70,
         origin: { y: 0.6 }
       });
-    } catch (e) {
-      // non-fatal
-    }
+    } catch (e) {}
 
-    // Trigger browser file download (supports both server endpoint and on-device data URL)
     const url = getDownloadUrl(fileId, format, protectedImage);
     const link = document.createElement('a');
     link.href = url;
@@ -73,7 +80,7 @@ export default function DownloadModal({ isOpen, onClose, fileId, imageInfo, resi
           </div>
           <h3 className="text-2xl font-bold text-white">Pre-Flight Privacy Checklist</h3>
           <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-            Confirm your privacy decisions before downloading the permanent, irreversible export.
+            Confirm your privacy decisions before downloading the permanent, irreversible protected export.
           </p>
         </div>
 
@@ -97,8 +104,9 @@ export default function DownloadModal({ isOpen, onClose, fileId, imageInfo, resi
                 className="max-h-52 w-auto object-contain mx-auto"
               />
             ) : (
-              <div className="py-12 text-center text-xs text-slate-500">
-                Generating protected output preview...
+              <div className="py-12 text-center text-xs text-slate-400">
+                <FileCheck className="w-8 h-8 mx-auto mb-2 text-cyan-400" />
+                Sanitized Document Ready for Download (.{(format || origExt).toUpperCase()})
               </div>
             )}
           </div>
@@ -107,18 +115,18 @@ export default function DownloadModal({ isOpen, onClose, fileId, imageInfo, resi
         {/* Export Properties Strip */}
         <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs text-slate-300 mb-6">
           <div>
-            <span className="text-slate-500">Dimensions: </span>
-            <span className="font-semibold text-white">
-              {Array.isArray(imageInfo?.dimensions) ? `${imageInfo.dimensions[0]} × ${imageInfo.dimensions[1]}` : (imageInfo?.width ? `${imageInfo.width} × ${imageInfo.height}` : 'Auto')} px
+            <span className="text-slate-500">File: </span>
+            <span className="font-semibold text-white truncate max-w-[120px] inline-block align-bottom">
+              {imageInfo?.filename || "document"}
             </span>
           </div>
           <div>
-            <span className="text-slate-500">Metadata: </span>
-            <span className="font-semibold text-emerald-400">EXIF Stripped</span>
+            <span className="text-slate-500">Original: </span>
+            <span className="font-semibold text-emerald-400">100% Untouched</span>
           </div>
           <div>
-            <span className="text-slate-500">Security: </span>
-            <span className="font-semibold text-cyan-400">Permanent Burn-In</span>
+            <span className="text-slate-500">Export: </span>
+            <span className="font-semibold text-cyan-400">Permanent Redaction</span>
           </div>
         </div>
 
@@ -132,8 +140,8 @@ export default function DownloadModal({ isOpen, onClose, fileId, imageInfo, resi
               className="mt-0.5 w-4 h-4 rounded text-blue-600 focus:ring-blue-500 bg-slate-900 border-slate-700"
             />
             <div className="text-xs text-slate-300">
-              <strong className="text-white block font-medium">1. Personal & Financial Verification</strong>
-              I have verified that all sensitive passwords, account numbers, and identities are properly masked.
+              <strong className="text-white block font-medium">1. Critical PII Protection</strong>
+              All high-priority identifiers (Aadhaar, PAN, Bank Accounts, Cards) are permanently wiped from the exported file.
             </div>
           </label>
 
@@ -145,8 +153,8 @@ export default function DownloadModal({ isOpen, onClose, fileId, imageInfo, resi
               className="mt-0.5 w-4 h-4 rounded text-blue-600 focus:ring-blue-500 bg-slate-900 border-slate-700"
             />
             <div className="text-xs text-slate-300">
-              <strong className="text-white block font-medium">2. Explicit Share Consent</strong>
-              I confirm that only the sections I explicitly marked visible will be readable by recipients.
+              <strong className="text-white block font-medium">2. Separate Protected Copy</strong>
+              The original uploaded file is not overwritten; a separate sanitized file is being exported.
             </div>
           </label>
 
@@ -158,8 +166,8 @@ export default function DownloadModal({ isOpen, onClose, fileId, imageInfo, resi
               className="mt-0.5 w-4 h-4 rounded text-blue-600 focus:ring-blue-500 bg-slate-900 border-slate-700"
             />
             <div className="text-xs text-slate-300">
-              <strong className="text-white block font-medium">3. Permanent Flattening Acknowledgement</strong>
-              I understand all blurred pixels are burned in permanently and cannot be recovered or unblurred.
+              <strong className="text-white block font-medium">3. Irreversible Sanitization</strong>
+              Redactions cannot be recovered via text copying, unblurring, or file inspection.
             </div>
           </label>
         </div>
@@ -168,47 +176,78 @@ export default function DownloadModal({ isOpen, onClose, fileId, imageInfo, resi
         <div className="flex flex-wrap items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs mb-6 gap-2">
           <span className="font-semibold text-slate-300">Export Format:</span>
           <div className="flex flex-wrap items-center gap-1.5">
-            <button
-              onClick={() => setFormat('png')}
-              className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
-                format === 'png'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white bg-slate-900'
-              }`}
-            >
-              PNG
-            </button>
-            <button
-              onClick={() => setFormat('jpg')}
-              className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
-                format === 'jpg'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white bg-slate-900'
-              }`}
-            >
-              JPG
-            </button>
-            <button
-              onClick={() => setFormat('pdf')}
-              className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
-                format === 'pdf'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white bg-slate-900'
-              }`}
-            >
-              PDF Document
-            </button>
-            {imageInfo?.filename?.toLowerCase().endsWith('.docx') && (
-              <button
-                onClick={() => setFormat('docx')}
-                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
-                  format === 'docx'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white bg-slate-900'
-                }`}
-              >
-                DOCX (Sanitized)
-              </button>
+            {isDoc ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setFormat(origExt)}
+                  className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                    format === origExt
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white bg-slate-900'
+                  }`}
+                >
+                  .{origExt.toUpperCase()} (Native)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormat('pdf')}
+                  className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                    format === 'pdf'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white bg-slate-900'
+                  }`}
+                >
+                  PDF Document
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormat('png')}
+                  className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                    format === 'png'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white bg-slate-900'
+                  }`}
+                >
+                  PNG Preview
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setFormat('png')}
+                  className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                    format === 'png'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white bg-slate-900'
+                  }`}
+                >
+                  PNG
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormat('jpg')}
+                  className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                    format === 'jpg'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white bg-slate-900'
+                  }`}
+                >
+                  JPG
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormat('pdf')}
+                  className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                    format === 'pdf'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white bg-slate-900'
+                  }`}
+                >
+                  PDF
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -220,7 +259,7 @@ export default function DownloadModal({ isOpen, onClose, fileId, imageInfo, resi
           className="w-full py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 shadow-lg shadow-emerald-500/25 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Download className="w-5 h-5" />
-          {downloading ? 'Downloading Sanitized File...' : 'Download Protected Screenshot'}
+          {downloading ? 'Downloading Sanitized File...' : `Download Protected .${(format || 'png').toUpperCase()}`}
         </button>
 
         {!allChecked && (

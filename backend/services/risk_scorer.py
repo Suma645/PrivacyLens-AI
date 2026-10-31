@@ -3,6 +3,7 @@ class RiskScorer:
         self.severity_weights = {
             "Critical": 35,
             "High": 20,
+            "Normal": 10,
             "Medium": 10,
             "Low": 5
         }
@@ -17,8 +18,9 @@ class RiskScorer:
 
     def calculate_score(self, detections, metadata_findings=None):
         """
-        Calculates a transparent confidentiality risk score (0-100)
-        and categorizes risk level and breakdown.
+        Calculates transparent confidentiality risk score (0-100)
+        and categorizes 3-tier risk level (Critical, High, Normal).
+        Guarantees that when detections exist, risk score is never 0.
         """
         if not detections and not metadata_findings:
             return {
@@ -29,28 +31,33 @@ class RiskScorer:
                 "breakdown": {
                     "Critical": 0,
                     "High": 0,
+                    "Normal": 0,
                     "Medium": 0,
                     "Low": 0
                 },
                 "category_breakdown": {},
-                "explanation": "No sensitive data patterns, facial identities, or authentication credentials detected in this screenshot.",
-                "factor_reasons": ["Clean image", "No credentials or PII found"]
+                "explanation": "No sensitive data patterns found. Keep visible or manually redact if desired.",
+                "factor_reasons": ["Clean file", "No sensitive PII found"]
             }
 
         total_weight = 0.0
-        breakdown = {"Critical": 0, "High": 0, "Medium": 0, "Low": 0}
+        breakdown = {"Critical": 0, "High": 0, "Normal": 0, "Medium": 0, "Low": 0}
         category_breakdown = {}
         factor_reasons = []
 
         for det in detections:
-            sev = det.get("risk_severity", "Low")
-            cat = det.get("category", "Confidential Information")
+            sev = det.get("risk_severity", "Normal")
+            # Normalize severity labels
+            if sev not in self.severity_weights:
+                sev = "Normal" if sev in ("Medium", "Low") else "High"
+
+            cat = det.get("category", "Personal Information")
             conf = det.get("confidence", 0.9)
             
             breakdown[sev] = breakdown.get(sev, 0) + 1
             category_breakdown[cat] = category_breakdown.get(cat, 0) + 1
 
-            sev_wt = self.severity_weights.get(sev, 5)
+            sev_wt = self.severity_weights.get(sev, 10)
             cat_mult = self.category_multipliers.get(cat, 1.0)
             item_score = sev_wt * cat_mult * conf
             total_weight += item_score
@@ -58,7 +65,7 @@ class RiskScorer:
         # Check metadata leaks (e.g. EXIF GPS)
         if metadata_findings and metadata_findings.get("has_gps"):
             total_weight += 20
-            factor_reasons.append("Exact GPS location coordinates found embedded in image metadata.")
+            factor_reasons.append("Exact GPS location coordinates found embedded in file metadata.")
 
         # Cross-category compounding risk
         unique_categories = len(category_breakdown)
@@ -68,30 +75,31 @@ class RiskScorer:
         elif unique_categories == 2:
             total_weight += 5
 
-        # Normalize score between 0 and 100
-        raw_score = int(min(100, round(total_weight)))
+        # Guaranteed minimum 15 when sensitive data is detected (never 0/100)
+        raw_score = max(15, int(min(100, round(total_weight))))
         
-        # Determine classification
-        if raw_score >= 80:
+        # Determine classification:
+        # Critical (Red >= 75), High (Orange >= 50), Normal / Medium (Yellow >= 25)
+        if raw_score >= 75 or breakdown.get("Critical", 0) > 0:
             classification = "Critical Risk"
             color = "#ef4444" # Red
-        elif raw_score >= 60:
+        elif raw_score >= 50 or breakdown.get("High", 0) > 0:
             classification = "High Risk"
             color = "#f97316" # Orange
-        elif raw_score >= 30:
-            classification = "Medium Risk"
-            color = "#f59e0b" # Amber
+        elif raw_score >= 25:
+            classification = "Normal Risk"
+            color = "#eab308" # Yellow
         else:
             classification = "Low Risk"
             color = "#10b981" # Emerald
 
         # Generate human-friendly explanations
-        if breakdown["Critical"] > 0:
-            factor_reasons.append(f"{breakdown['Critical']} critical credential/financial item(s) detected that could result in direct breach.")
-        if breakdown["High"] > 0:
-            factor_reasons.append(f"{breakdown['High']} high-risk identifiers detected (e.g. ID, address, biometric face, or banking info).")
-        if breakdown["Medium"] > 0:
-            factor_reasons.append(f"{breakdown['Medium']} medium-risk personal contact or network items found.")
+        if breakdown.get("Critical", 0) > 0:
+            factor_reasons.append(f"{breakdown['Critical']} critical identifier(s) (Aadhaar, PAN, Bank A/C, Cards) auto-protected.")
+        if breakdown.get("High", 0) > 0:
+            factor_reasons.append(f"{breakdown['High']} high-risk identifier(s) (UPI/UTR, passwords, credentials) detected.")
+        if breakdown.get("Normal", 0) > 0:
+            factor_reasons.append(f"{breakdown['Normal']} personal item(s) (email, phone, marks) awaiting user review.")
 
         explanation = f"Calculated {classification} score ({raw_score}/100) across {len(detections)} detected privacy factors. " + " ".join(factor_reasons)
 
@@ -109,7 +117,7 @@ class RiskScorer:
     def calculate_residual_risk(self, detections, manual_boxes=None):
         """
         Calculates residual risk score after user has chosen which items to protect.
-        Protected items (blur, pixelate, blackout) drop the risk score.
+        Protected items (blackout, blur, pixelate) drop the risk score.
         Items marked 'keep_visible: True' retain their risk weight.
         """
         unprotected_detections = [d for d in detections if d.get("keep_visible", False) is True]
@@ -117,10 +125,10 @@ class RiskScorer:
         if not unprotected_detections:
             return {
                 "residual_score": 0,
-                "residual_classification": "Low Risk (Safe to Share)",
+                "residual_classification": "Low Risk (All Sensitive Items Protected)",
                 "color": "#10b981",
                 "reduction_percent": 100,
-                "message": "All detected sensitive zones are protected. Safe for public sharing."
+                "message": "All sensitive items are securely protected. Safe for sharing."
             }
 
         res = self.calculate_score(unprotected_detections)
@@ -133,5 +141,5 @@ class RiskScorer:
             "residual_classification": res["classification"],
             "color": res["color"],
             "reduction_percent": reduction,
-            "message": f"Residual risk reduced by {reduction}%. {len(unprotected_detections)} item(s) kept visible."
+            "message": f"Residual risk: {res['score']}/100 ({reduction}% reduction). {len(unprotected_detections)} normal item(s) kept visible."
         }

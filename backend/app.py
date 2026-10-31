@@ -10,7 +10,7 @@ from werkzeug.utils import secure_filename
 
 from config import Config
 from services.cv_detector import CVDetector
-from services.sensitive_detector import SensitiveDetector
+from services.sensitive_detector import SensitiveDetector, mask_sensitive_value
 from services.risk_scorer import RiskScorer
 from services.image_processor import ImageProcessor
 from services.ocr_service import OCRService
@@ -55,26 +55,26 @@ def health():
     """Health check endpoint for Render/Vercel and monitoring."""
     return jsonify({
         "status": "healthy",
-        "service": "Privacy Lens AI - Smart Screenshot & Document Privacy Protector",
+        "service": "PrivacyLens-AI Universal Document Privacy Scanner & Protection Engine",
         "version": "2.0.0",
         "opencv_version": cv2.__version__,
         "ocr_available": ocr_service.is_engine_ready(),
         "ai_service_connected": ai_service.is_ai_connected(),
         "ai_provider": ai_service.get_provider_name(),
-        "document_support": ["pdf", "docx", "png", "jpg", "jpeg", "webp"],
+        "supported_documents": list(DocumentService.SUPPORTED_EXTENSIONS),
         "steganography_supported": True
     })
 
 @app.route("/api/analyze", methods=["POST"])
 def analyze_screenshot():
     """
-    Analyzes uploaded screenshot or document (PDF / DOCX):
-    - Multi-format support: PDF, DOCX, and images
-    - Automatic highest-priority detection: Aadhaar, PAN, Bank Account (Solid Blackout by default)
-    - Optional detection: Email, Phone, Marks/Percentages (Visible by default, checkbox to blur)
-    - OCR text extraction & bounding box alignment
+    Universal Document & Screenshot Privacy Scanner:
+    - Multi-format support: PDF, DOC, DOCX, TXT, RTF, XLS, XLSX, PPT, PPTX, ODT, ODS, ODP, PNG, JPG, WEBP
+    - Automatic critical detection: Aadhaar, PAN, Bank Account, IFSC, Cards (Solid Blackout by default)
+    - Manual user control: Email, Phone, Student marks/grades, Names, Addresses (Kept visible by default)
+    - Bounding box alignment & location mapping (Page / Sheet / Slide)
     - Confidentiality risk score calculation (0-100)
-    - Generates sanitized live preview
+    - Generates live protected preview
     """
     try:
         file = None
@@ -91,7 +91,7 @@ def analyze_screenshot():
             return jsonify({"error": "No file provided"}), 400
 
         if not allowed_file(file.filename):
-            return jsonify({"error": "Unsupported file format. Please upload PNG, JPG, JPEG, WEBP, PDF, or DOCX."}), 400
+            return jsonify({"error": "Unsupported file format. Please upload PDF, DOCX, XLSX, PPTX, TXT, RTF, or PNG/JPG/WEBP images."}), 400
 
         # Optional client OCR tokens passed as JSON string in form data
         if 'client_ocr_tokens' in request.form:
@@ -108,17 +108,26 @@ def analyze_screenshot():
         filepath = os.path.join(Config.TEMP_DIR, saved_filename)
         file.save(filepath)
 
+        # Validate file safety & magic bytes
+        is_safe, msg = document_service.validate_file_safety(filepath, file.filename)
+        if not is_safe:
+            os.remove(filepath)
+            return jsonify({"error": f"Security check failed: {msg}"}), 400
+
         is_doc = document_service.is_document(file.filename)
         doc_meta = {}
 
         if is_doc:
-            # 1. Process Document (PDF / DOCX)
+            # 1. Process Universal Document (PDF, DOCX, XLSX, PPTX, TXT, RTF, etc.)
             doc_data = document_service.extract_document_text_and_preview(filepath, file.filename)
             pil_img = doc_data['preview_pil']
             cv_img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
-            doc_text = doc_data['text']
+            doc_text = doc_data.get('text', '')
+            pages_details = doc_data.get('pages_details', [])
             doc_meta = {
                 "pages_count": doc_data.get('pages_count', 1),
+                "sheets_count": doc_data.get('sheets_count', 0),
+                "slides_count": doc_data.get('slides_count', 0),
                 "is_document": True,
                 "file_type": doc_data.get('file_type', ext)
             }
@@ -129,16 +138,25 @@ def analyze_screenshot():
             # OCR scan on the document page preview
             ocr_blocks = ocr_service.extract_text_and_boxes(pil_img, cv_img, client_tokens, filename=file.filename)
 
-            # Detect sensitive patterns from document text
-            direct_text_dets = sensitive_detector.scan_text(doc_text)
-            block_dets = sensitive_detector.scan_ocr_blocks(ocr_blocks)
+            # Detect sensitive patterns per page/sheet/slide for precise location mapping
+            direct_text_dets = []
+            if pages_details:
+                for p_info in pages_details:
+                    p_text = p_info.get("text", "")
+                    p_loc = p_info.get("location", "Page 1")
+                    p_dets = sensitive_detector.scan_text(p_text, location=p_loc)
+                    direct_text_dets.extend(p_dets)
+            else:
+                direct_text_dets = sensitive_detector.scan_text(doc_text, location="Page 1")
+
+            block_dets = sensitive_detector.scan_ocr_blocks(ocr_blocks, location="Page 1 Preview")
 
             # Merge and align detections
             combined_raw = direct_text_dets + block_dets
             text_detections = []
             seen_texts = set()
             for d in combined_raw:
-                k = f"{d['category']}_{d['extracted_text']}"
+                k = f"{d['category']}_{d.get('raw_text', d['extracted_text'])}"
                 if k not in seen_texts:
                     seen_texts.add(k)
                     text_detections.append(d)
@@ -161,7 +179,7 @@ def analyze_screenshot():
             qr_detections = cv_detector.detect_qr_codes(cv_img)
 
             ocr_blocks = ocr_service.extract_text_and_boxes(pil_img, cv_img, client_tokens, filename=file.filename)
-            text_detections = sensitive_detector.scan_ocr_blocks(ocr_blocks)
+            text_detections = sensitive_detector.scan_ocr_blocks(ocr_blocks, location="Image / Screenshot")
 
         img_width, img_height = pil_img.size
 
@@ -170,28 +188,43 @@ def analyze_screenshot():
         combined_detections = face_detections + qr_detections + text_detections
         enhanced_detections = ai_service.enhance_detections(all_raw_text, combined_detections, ocr_blocks=ocr_blocks)
 
-        # Classify Priority & Deduplicate
+        # Classify Priority & Deduplicate according to user requirements:
+        # CRITICAL – Red: Aadhaar, PAN, Bank account, IFSC, Cards, SSN
+        # HIGH – Orange: UPI ID, UTR, Passwords, OTPs, API keys
+        # NORMAL – Yellow: Email, Phone, Marks & Grades, Names, Addresses
         final_detections = []
         seen_keys = set()
         for det in enhanced_detections:
             cat = det.get('category', '')
             typ = det.get('type', '')
-            text_val = det.get('extracted_text', '')
+            text_val = det.get('raw_text', det.get('extracted_text', ''))
 
-            # Enforce Highest-Priority vs Optional rules
-            if any(h in typ.lower() for h in ['aadhaar', 'pan card', 'bank account', 'iban']):
-                det['priority'] = 'highest'
+            # Enforce 3-tier rules
+            if any(h in typ.lower() for h in ['aadhaar', 'pan card', 'pan number', 'bank account', 'ifsc', 'card', 'social security', 'ssn', 'passport']):
+                det['priority'] = 'critical'
                 det['risk_severity'] = 'Critical'
                 det['keep_visible'] = False
                 det['protection_style'] = 'blackout'
                 det['recommended_action'] = 'Solid Blackout'
-            elif any(o in typ.lower() for o in ['email', 'phone', 'marks', 'percentage', 'score']):
-                det['priority'] = 'optional'
-                det['keep_visible'] = True # Kept visible by default per user requirement!
+                det['warning'] = 'CRITICAL PII: Automatically protected with solid blackout to prevent identity/financial theft.'
+            elif any(hi in typ.lower() for hi in ['upi id', 'virtual payment', 'utr', 'transaction', 'password', 'otp', 'api key', 'secret']):
+                det['priority'] = 'high'
+                det['risk_severity'] = 'High'
+                det['keep_visible'] = False
+                det['protection_style'] = 'blur'
+                det['recommended_action'] = 'Gaussian Blur'
+            elif any(o in typ.lower() for o in ['email', 'phone', 'marks', 'percentage', 'score', 'name', 'address', 'birth']):
+                det['priority'] = 'normal'
+                det['risk_severity'] = 'Normal'
+                det['keep_visible'] = True  # Kept visible by default per user requirement for user review!
                 det['protection_style'] = 'blur'
                 det['recommended_action'] = 'Blur'
 
-            key = f"{cat}_{text_val}_{det['bounding_box']['x']}_{det['bounding_box']['y']}"
+            if 'masked_value' not in det:
+                det['masked_value'] = mask_sensitive_value(typ, text_val)
+
+            box = det.get('bounding_box', {})
+            key = f"{cat}_{text_val}_{box.get('x', 0)}_{box.get('y', 0)}"
             if key not in seen_keys:
                 seen_keys.add(key)
                 final_detections.append(det)
@@ -209,7 +242,7 @@ def analyze_screenshot():
                 "y": d["bounding_box"]["y"],
                 "width": d["bounding_box"]["width"],
                 "height": d["bounding_box"]["height"],
-                "style": d.get("protection_style", "blackout" if d.get("priority") == "highest" else "blur")
+                "style": d.get("protection_style", "blackout" if d.get("priority") == "critical" else "blur")
             }
             for d in final_detections
             if d.get("keep_visible") is False
@@ -233,6 +266,13 @@ def analyze_screenshot():
             "timestamp": time.time()
         }
 
+        # Calculate counts
+        critical_count = sum(1 for d in final_detections if d.get('priority') == 'critical')
+        high_count = sum(1 for d in final_detections if d.get('priority') == 'high')
+        normal_count = sum(1 for d in final_detections if d.get('priority') == 'normal')
+        auto_protected_count = sum(1 for d in final_detections if not d.get('keep_visible', False))
+        awaiting_decision_count = sum(1 for d in final_detections if d.get('keep_visible', False))
+
         return jsonify({
             "success": True,
             "file_id": file_id,
@@ -252,6 +292,14 @@ def analyze_screenshot():
             "score_color": score_data["color"],
             "breakdown": score_data["breakdown"],
             "category_breakdown": score_data["category_breakdown"],
+            "priority_summary": {
+                "total": len(final_detections),
+                "critical": critical_count,
+                "high": high_count,
+                "normal": normal_count,
+                "auto_protected": auto_protected_count,
+                "awaiting_decisions": awaiting_decision_count
+            },
             "score_explanation": score_data["explanation"],
             "factor_reasons": score_data["factor_reasons"],
             "residual_risk": initial_residual,
@@ -262,43 +310,42 @@ def analyze_screenshot():
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({"error": f"Failed to analyze file: {str(e)}"}), 500
+        return jsonify({"error": f"Universal analysis failed: {str(e)}"}), 500
 
 @app.route("/api/protect", methods=["POST"])
-def update_protection():
+def apply_custom_protection():
     """
-    Applies user's selective privacy decisions:
-    - Highest-priority items (Aadhaar, PAN, Bank Accounts) blacked out with solid black boxes
-    - Optional items (Email, Phone, Marks) blurred only when checkbox is selected by user
-    - Custom manual rectangular redactions with choice of: blackout, blur, or pixelate
-    - Spotlight Mode: user selects what to keep visible, rest is blurred out
+    Applies custom privacy modifications requested by the user:
+    - User can toggle visibility of detections
+    - Invert redaction selection or toggle keep_visible
+    - Manual boxes supported
+    - Real-time recalculation of residual confidentiality risk
     """
     try:
-        data = request.get_json() or {}
-        file_id = data.get("file_id")
+        data = request.get_json()
+        if not data or "file_id" not in data:
+            return jsonify({"error": "Missing file_id in request payload"}), 400
 
-        if not file_id or file_id not in SESSIONS:
-            return jsonify({"error": "Session expired or invalid file_id. Please re-upload your screenshot."}), 404
+        file_id = data["file_id"]
+        if file_id not in SESSIONS:
+            return jsonify({"error": "Session expired or file not found."}), 404
 
         session = SESSIONS[file_id]
         original_cv = session["original_cv"]
-        detections = data.get("detections", session["detections"])
+        is_doc = session.get("is_document", False)
+        detections = data.get("detections", session.get("detections", []))
         manual_boxes = data.get("manual_boxes", [])
         visible_boxes = data.get("visible_boxes", [])
-        mode = data.get("mode", "spotlight" if len(visible_boxes) > 0 else "auto")
+        mode = data.get("mode", "spotlight")
 
-        # Collect user-selected visible areas (Spotlight Sharing)
-        all_visible = list(visible_boxes)
         redaction_specs = []
 
+        all_visible = list(visible_boxes)
         for det in detections:
             if det.get("keep_visible") is True:
-                b = det.get("bounding_box", {})
-                if b and b not in all_visible:
-                    all_visible.append(b)
+                all_visible.append(det.get("bounding_box", {}))
 
-        if mode == "spotlight" and len(all_visible) > 0:
-            # Spotlight Sharing: Only selected area stays clear, everything else is automatically blurred!
+        if mode == "spotlight" and len(all_visible) > 0 and not is_doc:
             new_protected_cv = image_processor.render_spotlight_image(original_cv, all_visible)
             session["protected_cv"] = new_protected_cv
             session["detections"] = detections
@@ -310,17 +357,13 @@ def update_protection():
                 "message": f"Only your {len(all_visible)} selected section(s) are visible. Everything else is securely blurred."
             }
         else:
-            # Redaction mode:
-            # - Aadhaar, PAN, Bank Accounts: solid black box by default
-            # - Optional items (Email, Phone, Marks): blurred if keep_visible == False
-            # - Manual boxes: blackout, blur, or pixelate
             for det in detections:
                 if det.get("keep_visible") is True:
                     continue
 
                 box = det.get("bounding_box", {})
-                priority = det.get("priority", "standard")
-                style = det.get("protection_style", "blackout" if priority == "highest" else "blur")
+                priority = det.get("priority", "normal")
+                style = det.get("protection_style", "blackout" if priority == "critical" else "blur")
 
                 redaction_specs.append({
                     "x": box.get("x", 0),
@@ -364,8 +407,8 @@ def update_protection():
 def download_protected(file_id):
     """
     Downloads the final sanitized file:
-    - Supports PNG, JPG, PDF, and DOCX
-    - Permanently sanitizes original file content
+    - Supports PNG, JPG, PDF, DOCX, XLSX, PPTX, TXT, RTF, etc.
+    - Permanently sanitizes original file content into separate protected copy
     - Strips all EXIF metadata and hidden layers
     """
     try:
@@ -373,38 +416,41 @@ def download_protected(file_id):
             return jsonify({"error": "Session expired or file not found."}), 404
 
         session = SESSIONS[file_id]
-        fmt = request.args.get("format", "png").lower()
+        fmt = request.args.get("format", "").lower()
         is_doc = session.get("is_document", False)
         timestamp = int(time.time())
 
-        # If document download requested (e.g. DOCX or PDF)
-        if is_doc and fmt in ["pdf", "docx"]:
+        if is_doc:
             orig_path = session.get("filepath")
-            orig_ext = session.get("ext", "pdf")
-            sensitive_texts = [d.get("raw_text") for d in session.get("detections", []) if not d.get("keep_visible")]
-
-            if fmt == "docx" and orig_ext == "docx":
-                out_path = os.path.join(Config.TEMP_DIR, f"sanitized_{file_id}.docx")
-                document_service.sanitize_docx(orig_path, out_path, sensitive_texts)
-                return send_file(out_path, as_attachment=True, download_name=f"privacylens-sanitized-{timestamp}.docx")
-            else:
-                out_path = os.path.join(Config.TEMP_DIR, f"sanitized_{file_id}.pdf")
-                document_service.sanitize_pdf(orig_path, out_path, sensitive_texts)
-                return send_file(out_path, as_attachment=True, download_name=f"privacylens-sanitized-{timestamp}.pdf")
+            orig_ext = session.get("ext", "pdf").lower()
+            target_ext = fmt if fmt in ["pdf", "docx", "xlsx", "pptx", "txt", "rtf", "odt", "ods", "odp"] else orig_ext
+            
+            # Extract sensitive items that were NOT marked keep_visible
+            sensitive_items = [
+                {
+                    "text": d.get("raw_text") or d.get("extracted_text") or d.get("text", ""),
+                    "keep_visible": d.get("keep_visible", False)
+                }
+                for d in session.get("detections", [])
+            ]
+            
+            out_filename = f"privacylens-protected-{timestamp}.{target_ext}"
+            out_path = os.path.join(Config.TEMP_DIR, f"sanitized_{file_id}.{target_ext}")
+            
+            document_service.sanitize_document(orig_path, out_path, sensitive_items)
+            return send_file(out_path, as_attachment=True, download_name=out_filename)
 
         # Standard image export
         protected_cv = session.get("protected_cv")
         if protected_cv is None:
             return jsonify({"error": "No protected content available."}), 400
 
-        if fmt not in ["png", "jpg", "jpeg"]:
-            fmt = "png"
-
-        image_bytes = image_processor.cv2_to_bytes(protected_cv, format=fmt)
-        download_filename = f"privacylens-protected-{timestamp}.{fmt}"
+        target_fmt = fmt if fmt in ["png", "jpg", "jpeg", "webp"] else "png"
+        image_bytes = image_processor.cv2_to_bytes(protected_cv, format=target_fmt)
+        download_filename = f"privacylens-protected-{timestamp}.{target_fmt}"
         
         response = make_response(image_bytes)
-        response.headers.set('Content-Type', f'image/{fmt}')
+        response.headers.set('Content-Type', f'image/{target_fmt}')
         response.headers.set('Content-Disposition', 'attachment', filename=download_filename)
         return response
 

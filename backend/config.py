@@ -7,8 +7,13 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "privacylens-ai-cybersecurity-secret-key-2026")
     
     # Upload Settings
-    MAX_CONTENT_LENGTH = 30 * 1024 * 1024  # 30 MB max
-    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "bmp", "pdf", "docx"}
+    MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50 MB max
+    ALLOWED_EXTENSIONS = {
+        # Images
+        "png", "jpg", "jpeg", "webp", "bmp", "tiff",
+        # Documents
+        "pdf", "doc", "docx", "txt", "rtf", "xls", "xlsx", "ppt", "pptx", "odt", "ods", "odp"
+    }
     TEMP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp_uploads")
     SESSION_EXPIRY_SECONDS = 3600  # 1 hour auto cleanup
     

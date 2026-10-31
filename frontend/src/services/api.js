@@ -1,23 +1,25 @@
-// API Client for Privacy Lens AI Backend with Seamless On-Device Privacy Fallback
+// API Client for PrivacyLens-AI with Lightning-Fast On-Device Privacy Fallback
 import { runClientDetection, calculateRiskScore, renderProtectedImage } from './clientDetector';
+import { runClientOcr } from './clientOcr';
 
 const rawBase = import.meta.env.VITE_API_BASE_URL || '';
 const API_BASE_URL = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
 
 // Cache current session image data for instant client-side updates
 let currentImageDataUrl = null;
+let currentUploadedFile = null;
 
 export async function checkBackendHealth() {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/health`, { signal: AbortSignal.timeout(3000) });
+    const res = await fetch(`${API_BASE_URL}/api/health`, { signal: AbortSignal.timeout(2000) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } catch (err) {
-    console.warn("Backend offline or unreachable, using on-device privacy engine:", err.message);
     return {
       status: "healthy (on-device engine)",
       ai_provider: "On-Device Privacy Engine",
-      ocr_available: true
+      ocr_available: true,
+      supported_documents: ["pdf", "docx", "xlsx", "pptx", "txt", "rtf", "png", "jpg", "jpeg", "webp"]
     };
   }
 }
@@ -32,19 +34,34 @@ function fileToDataUrl(file) {
   });
 }
 
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+
 export async function analyzeScreenshot(file, clientOcrTokens = []) {
-  // Save local data URL for client fallback
-  try {
-    currentImageDataUrl = await fileToDataUrl(file);
-  } catch (e) {
-    console.warn("Could not cache file data URL:", e);
+  currentUploadedFile = file;
+  const isImage = /\.(png|jpe?g|webp|bmp)$/i.test(file.name);
+  const isTextDoc = /\.(txt|rtf|json|csv|log)$/i.test(file.name);
+
+  if (isImage) {
+    try {
+      currentImageDataUrl = await fileToDataUrl(file);
+    } catch (e) {
+      console.warn("Could not cache file data URL:", e);
+    }
   }
 
-  // 1. Try server backend first if configured/available
+  // 1. Fast check if server backend is reachable (PDF, DOCX, XLSX, PPTX, Images)
   try {
     const formData = new FormData();
+    formData.append('file', file);
     formData.append('screenshot', file);
-    
+    formData.append('document', file);
     if (clientOcrTokens && clientOcrTokens.length > 0) {
       formData.append('client_ocr_tokens', JSON.stringify(clientOcrTokens));
     }
@@ -52,61 +69,72 @@ export async function analyzeScreenshot(file, clientOcrTokens = []) {
     const res = await fetch(`${API_BASE_URL}/api/analyze`, {
       method: 'POST',
       body: formData,
-      signal: AbortSignal.timeout(30000)
+      signal: AbortSignal.timeout(12000)
     });
 
     if (res.ok) {
       const data = await res.json();
-      return data;
+      if (data && data.detections) {
+        if (data.protected_image) {
+          currentImageDataUrl = data.original_image;
+        }
+        return data;
+      }
     }
   } catch (err) {
-    console.warn("Backend API unavailable or timed out. Falling back to On-Device Privacy Engine:", err);
+    console.warn("Backend /api/analyze unavailable, using on-device privacy engine:", err);
   }
 
-  // 2. On-Device Standalone Fallback (100% works on phone, airplane mode, or Vercel/Render static)
+  // 2. Lightning On-Device Standalone Engine (100% offline & safe)
   let activeTokens = clientOcrTokens || [];
-  if (activeTokens.length === 0) {
+  let fileText = "";
+
+  if (isTextDoc) {
     try {
-      const { runClientOcr } = await import('./clientOcr');
+      fileText = await readFileAsText(file);
+      const lines = fileText.split('\n').filter(l => l.trim().length > 0);
+      activeTokens = lines.map((line, idx) => ({
+        text: line.trim(),
+        box: { x: 30, y: 30 + idx * 25, width: Math.min(600, line.length * 9), height: 20 },
+        is_line: true
+      }));
+    } catch (e) {
+      console.warn("Error reading text document locally:", e);
+    }
+  } else if (isImage && activeTokens.length === 0) {
+    try {
       activeTokens = await runClientOcr(file);
     } catch (e) {
-      console.warn("On-device OCR fallback error:", e);
+      console.warn("Direct client OCR fallback error:", e);
     }
   }
 
-  // Check if file is a demo sample
-  if (activeTokens.length === 0 && file && file.name) {
-    try {
-      const jsonCandidate = `/samples/${file.name.replace(/\.png$/i, '.ocr.json')}`;
-      const sampleRes = await fetch(jsonCandidate);
-      if (sampleRes.ok) {
-        activeTokens = await sampleRes.json();
-      }
-    } catch (e) {
-      // non-fatal
-    }
-  }
-
-  const detections = runClientDetection(activeTokens);
+  const detections = runClientDetection(activeTokens, "Page 1");
   const riskAnalysis = calculateRiskScore(detections);
-  const protectedImage = await renderProtectedImage(currentImageDataUrl, detections, []);
+  const protectedImage = isImage && currentImageDataUrl 
+    ? await renderProtectedImage(currentImageDataUrl, detections, [])
+    : null;
 
   const fileId = 'client_' + Date.now();
 
   return {
     file_id: fileId,
-    original_image: currentImageDataUrl,
-    protected_image: protectedImage,
+    original_image: currentImageDataUrl || null,
+    protected_image: protectedImage || currentImageDataUrl || null,
     image_info: {
       filename: file.name,
       dimensions: [800, 600],
-      file_size_kb: Math.round(file.size / 1024)
+      file_size_kb: Math.round(file.size / 1024),
+      pages_count: 1,
+      is_document: !isImage,
+      file_type: file.name.split('.').pop().toLowerCase()
     },
     detections: detections,
     confidentiality_score: riskAnalysis.score,
     risk_classification: riskAnalysis.classification,
     score_color: riskAnalysis.color,
     breakdown: riskAnalysis.breakdown,
+    priority_summary: riskAnalysis.priority_summary,
     category_breakdown: riskAnalysis.category_breakdown,
     score_explanation: riskAnalysis.explanation,
     factor_reasons: riskAnalysis.factor_reasons,
@@ -125,8 +153,10 @@ export async function analyzeScreenshot(file, clientOcrTokens = []) {
 
 export async function updateProtection(fileId, detections, manualBoxes = [], visibleBoxes = [], mode = 'spotlight') {
   // If this was a client-side session or backend is unavailable, render with Canvas
-  if (!fileId || fileId.startsWith('client_')) {
-    const protectedImage = await renderProtectedImage(currentImageDataUrl, detections, manualBoxes, visibleBoxes, mode);
+  if (!fileId || fileId.startsWith('client_') || !API_BASE_URL) {
+    const protectedImage = currentImageDataUrl 
+      ? await renderProtectedImage(currentImageDataUrl, detections, manualBoxes, visibleBoxes, mode)
+      : null;
     const unmasked = detections.filter(d => d.keep_visible);
     const residual = calculateRiskScore(unmasked);
 
@@ -156,18 +186,19 @@ export async function updateProtection(fileId, detections, manualBoxes = [], vis
         visible_boxes: visibleBoxes,
         mode
       }),
-      signal: AbortSignal.timeout(5000)
+      signal: AbortSignal.timeout(4000)
     });
 
     if (res.ok) {
       return await res.json();
     }
   } catch (err) {
-    console.warn("Server update failed, falling back to on-device canvas redactor:", err);
+    // fallback
   }
 
-  // Fallback to canvas
-  const protectedImage = await renderProtectedImage(currentImageDataUrl, detections, manualBoxes, visibleBoxes, mode);
+  const protectedImage = currentImageDataUrl 
+    ? await renderProtectedImage(currentImageDataUrl, detections, manualBoxes, visibleBoxes, mode)
+    : null;
   const unmasked = detections.filter(d => d.keep_visible);
   const residual = calculateRiskScore(unmasked);
 
@@ -184,7 +215,7 @@ export async function updateProtection(fileId, detections, manualBoxes = [], vis
 }
 
 export function getDownloadUrl(fileId, format = 'png', protectedImageDataUrl = null) {
-  if (fileId && fileId.startsWith('client_') && protectedImageDataUrl) {
+  if ((!fileId || fileId.startsWith('client_') || !API_BASE_URL) && protectedImageDataUrl) {
     return protectedImageDataUrl;
   }
   return `${API_BASE_URL}/api/download/${fileId}?format=${format}`;
@@ -201,7 +232,7 @@ export async function encodeStegoMessage(imageFile, message, password = null) {
   const res = await fetch(`${API_BASE_URL}/api/stego/encode`, {
     method: 'POST',
     body: formData,
-    signal: AbortSignal.timeout(30000)
+    signal: AbortSignal.timeout(15000)
   });
 
   if (!res.ok) {
@@ -222,7 +253,7 @@ export async function decodeStegoMessage(imageFile, password = null) {
   const res = await fetch(`${API_BASE_URL}/api/stego/decode`, {
     method: 'POST',
     body: formData,
-    signal: AbortSignal.timeout(30000)
+    signal: AbortSignal.timeout(15000)
   });
 
   if (!res.ok) {
